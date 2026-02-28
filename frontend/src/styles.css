@@ -1,0 +1,279 @@
+:root {
+  --bg: #eceff3;
+  --ink: #101317;
+  --card: #ffffff;
+  --line: #ced4dc;
+  --accent: #e10600;
+  --accent-dark: #9c0400;
+  --muted: #5e6773;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  color: var(--ink);
+  background:
+    linear-gradient(145deg, #f8fafc 0%, #e4e9ef 100%);
+}
+
+.page {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.hero {
+  border: 1px solid #1a1e23;
+  border-top: 5px solid var(--accent);
+  background: linear-gradient(120deg, #ffffff 0%, #f7f9fc 100%);
+  padding: 0.9rem 1rem;
+  box-shadow: 0 7px 20px rgba(16, 19, 23, 0.08);
+}
+
+h1 {
+  margin: 0 0 0.3rem;
+  font-size: clamp(1.2rem, 1.8vw, 2rem);
+  letter-spacing: 0.01em;
+}
+
+.track-ribbon {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+}
+
+.track-chip {
+  display: inline-block;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.78rem;
+  color: #1b2128;
+  background: #edf2f7;
+  border: 1px solid #d4dbe4;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.mode-switch {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 1px solid #171c22;
+  background: #ffffff;
+  padding: 0.42rem 0.7rem;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+button.active {
+  background: var(--accent);
+  border-color: var(--accent-dark);
+  color: white;
+}
+
+.grid {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.grid > .card {
+  grid-column: span 3;
+}
+
+.casual-layout {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.top-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: 3fr 2fr 3fr 4fr;
+  align-items: start;
+}
+
+.top-grid.sprint-weekend .driver-card {
+  min-height: 980px;
+}
+
+.top-grid.sprint-weekend .driver-card .card-table-wrap {
+  max-height: 920px;
+}
+
+.card {
+  border: 1px solid #1a1e23;
+  background: var(--card);
+  padding: 0.65rem;
+  box-shadow: 0 5px 14px rgba(16, 19, 23, 0.07);
+}
+
+.card h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+}
+
+.top-card {
+  min-height: 540px;
+}
+
+.constructor-card {
+  min-height: 540px;
+}
+
+.card-table-wrap {
+  max-height: 480px;
+  overflow: auto;
+}
+
+.wide-card {
+  grid-column: 1 / -1;
+}
+
+.progression-card,
+.rounds-card {
+  width: 100%;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 0.28rem;
+  vertical-align: top;
+}
+
+.avatar-cell,
+.logo-cell {
+  width: 46px;
+  min-width: 46px;
+}
+
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #c9d1dc;
+}
+
+.team-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.driver-portrait-wrap {
+  margin-top: 0.7rem;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.driver-portrait-img {
+  width: 210px;
+  height: 210px;
+  object-fit: cover;
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f5f7fb;
+  z-index: 1;
+}
+
+.small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.kpi {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.form-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+input,
+select {
+  padding: 0.28rem 0.36rem;
+  border: 1px solid #8a95a3;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1280px) {
+  .top-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid > .card {
+    grid-column: span 6;
+  }
+
+  .top-card,
+  .constructor-card {
+    min-height: 380px;
+  }
+
+  .card-table-wrap {
+    max-height: 320px;
+  }
+}
+
+@media (max-width: 780px) {
+  .page {
+    padding: 0.65rem;
+  }
+
+  .top-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid > .card {
+    grid-column: 1 / -1;
+  }
+
+  .top-card,
+  .constructor-card {
+    min-height: auto;
+  }
+
+  .card-table-wrap {
+    max-height: 280px;
+  }
+}
