@@ -19,6 +19,7 @@ import {
   simulateNetwork,
   simulateStrategy,
 } from "./api";
+import { Analytics } from "@vercel/analytics/react";
 import "./styles.css";
 
 const TEAM_COLORS = {
@@ -829,6 +830,7 @@ export default function App() {
       {mode === "casual"
         ? <CasualPanel overview={overview} race={race} roundsSummary={roundsSummary} roundNo={roundNo} />
         : <EngineeringPanel roundNo={roundNo} race={race} />}
+      <Analytics />
     </div>
   );
 }
