@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import random
 from typing import Literal
 
@@ -14,10 +15,13 @@ from .season_data import SUPPORTED_SEASONS, load_or_build_season
 
 app = FastAPI(title="F1 Dual-Mode Analytics API", version="0.1.0")
 
+raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "*")
+allow_origins = [item.strip() for item in raw_origins.split(",") if item.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allow_origins or ["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

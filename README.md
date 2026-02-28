@@ -93,6 +93,35 @@ npm run dev
 docker compose up --build
 ```
 
+## Deployment
+
+### 1) Deploy backend on Render
+
+This repo includes a Render blueprint file:
+
+- `render.yaml`
+
+Quick steps:
+
+1. Go to Render Dashboard -> `New` -> `Blueprint`.
+2. Connect this GitHub repo: `Izzat2712/f1-dual-analytics`.
+3. Select the generated service `f1-dual-backend`.
+4. Set env var `CORS_ALLOW_ORIGINS` to your Vercel frontend domain (or multiple domains comma-separated).
+   Example:
+   `https://f1-dual-analytics.vercel.app,https://f1-dual-analytics-git-main-izzat2712s-projects.vercel.app`
+5. Deploy.
+
+Backend URL will be like:
+`https://f1-dual-backend.onrender.com`
+
+### 2) Connect frontend on Vercel
+
+In Vercel Project Settings -> `Environment Variables`, set:
+
+- `VITE_API_BASE=https://f1-dual-backend.onrender.com`
+
+Then redeploy frontend.
+
 ## Data & Assets
 
 ### Build/refresh season dataset
