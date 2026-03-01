@@ -55,6 +55,14 @@ const TEAM_SLUGS = {
   "AlphaTauri": "alphatauri",
 };
 
+const TEAM_COLOR_ALIASES = {
+  "stake f1 team kick sauber": "Sauber",
+  "kick sauber": "Sauber",
+  "visa cash app rb": "RB F1 Team",
+  "rb": "RB F1 Team",
+  "alphatauri": "AlphaTauri",
+};
+
 const DRIVER_PHOTO_SLUGS = {
   "alexander albon": "albon",
   "andrea kimi antonelli": "antonelli",
@@ -224,6 +232,20 @@ function colorForDriver(driverName, driverTeamMap, index) {
   return `hsl(${fallbackHue} 70% 42%)`;
 }
 
+function colorForTeam(teamName, fallback = "#d7263d") {
+  const raw = String(teamName || "").trim();
+  if (!raw) return fallback;
+  if (TEAM_COLORS[raw]) return TEAM_COLORS[raw];
+
+  const normalized = normalizeName(raw);
+  const alias = TEAM_COLOR_ALIASES[normalized];
+  if (alias && TEAM_COLORS[alias]) {
+    return TEAM_COLORS[alias];
+  }
+
+  return fallback;
+}
+
 function driverCode(driverName) {
   const parts = String(driverName || "").trim().split(/\s+/);
   const seed = parts.length ? parts[parts.length - 1] : driverName;
@@ -358,11 +380,22 @@ function PositionTooltip({
   );
 }
 
+function InfoHint({ label, content }) {
+  return (
+    <button type="button" className="info-icon-btn" aria-label={label}>
+      i
+      <span className="info-tooltip">{content}</span>
+    </button>
+  );
+}
+
 function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const noDataText = "No data yet for this season/round.";
   const progressionDrivers = overview?.progression_drivers || [];
   const progressionConstructors = overview?.progression_constructors || [];
   const isSprintWeekend = (race?.sprint_qualifying?.length || 0) > 0;
+  const [sprintSessionTab, setSprintSessionTab] = useState("results");
+  const [raceSessionTab, setRaceSessionTab] = useState("results");
   const driverTeamMap = useMemo(() => {
     const map = {};
     for (const item of overview?.driver_standings || []) {
@@ -370,6 +403,11 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     }
     return map;
   }, [overview]);
+
+  useEffect(() => {
+    setSprintSessionTab("results");
+    setRaceSessionTab("results");
+  }, [roundNo, race?.race]);
 
   return (
     <div className="casual-layout">
@@ -424,102 +462,185 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
         </div>
         </div>
 
-        <div className="card top-card qualifying-stack-card">
-        {race?.sprint_qualifying?.length > 0 && (
+        {isSprintWeekend ? (
           <>
-            <h3>Sprint Qualifying Results</h3>
-            <div className="table-scroll card-table-wrap">
-              <table>
-                <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Team</th></tr></thead>
-                <tbody>
-                  {race?.sprint_qualifying?.length
-                    ? race.sprint_qualifying.map((sq) => (
-                      <tr key={`${sq.position}-${sq.driver}`}>
-                        <td>{sq.position}</td>
-                        <td className="avatar-cell"><DriverAvatar driverName={sq.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                        <td>{sq.driver}</td>
-                        <td>{sq.team}</td>
-                      </tr>
-                    ))
-                    : <tr><td colSpan={4} className="small">{noDataText}</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-        <h3>Qualifying Results</h3>
-        <div className="table-scroll card-table-wrap">
-          <table>
-            <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead>
-            <tbody>
-              {race?.qualifying?.length
-                ? race.qualifying.map((q) => (
-                  <tr key={q.position}>
-                    <td>{q.position}</td>
-                    <td className="avatar-cell"><DriverAvatar driverName={q.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                    <td>{q.driver}</td>
-                    <td>{q.q1 || "-"}</td>
-                    <td>{q.q2 || "-"}</td>
-                    <td>{q.q3 || "-"}</td>
-                  </tr>
-                ))
-                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        </div>
+            <div className="card top-card session-standings-card qualifying-stack-card">
+              <div className="session-card-head">
+                <h3>Sprint Session</h3>
+                <div className="session-tabbar">
+                  <button
+                    className={sprintSessionTab === "results" ? "active" : ""}
+                    onClick={() => setSprintSessionTab("results")}
+                  >
+                    Sprint Result
+                  </button>
+                  <button
+                    className={sprintSessionTab === "qualifying" ? "active" : ""}
+                    onClick={() => setSprintSessionTab("qualifying")}
+                  >
+                    Sprint Qualifying
+                  </button>
+                </div>
+              </div>
 
-        <div className="card top-card">
-        {race?.sprint?.length > 0 && (
+              <div className="table-scroll card-table-wrap">
+                {sprintSessionTab === "results" ? (
+                  <table>
+                    <thead>
+                      <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
+                    </thead>
+                    <tbody>
+                      {race?.sprint?.length
+                        ? race.sprint.map((s) => (
+                          <tr key={`${s.position}-${s.driver}`}>
+                            <td>{s.position}</td>
+                            <td className="avatar-cell"><DriverAvatar driverName={s.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                            <td>{s.driver}</td>
+                            <td>{s.team}</td>
+                            <td>{s.time || "-"}</td>
+                            <td>{s.points}</td>
+                          </tr>
+                        ))
+                        : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table>
+                    <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Team</th></tr></thead>
+                    <tbody>
+                      {race?.sprint_qualifying?.length
+                        ? race.sprint_qualifying.map((sq) => (
+                          <tr key={`${sq.position}-${sq.driver}`}>
+                            <td>{sq.position}</td>
+                            <td className="avatar-cell"><DriverAvatar driverName={sq.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                            <td>{sq.driver}</td>
+                            <td>{sq.team}</td>
+                          </tr>
+                        ))
+                        : <tr><td colSpan={4} className="small">{noDataText}</td></tr>}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            <div className="card top-card session-standings-card qualifying-stack-card">
+              <div className="session-card-head">
+                <div>
+                  <h3>Race Session</h3>
+                  <div className="small">{race?.race}</div>
+                </div>
+                <div className="session-tabbar">
+                  <button
+                    className={raceSessionTab === "results" ? "active" : ""}
+                    onClick={() => setRaceSessionTab("results")}
+                  >
+                    Round Result
+                  </button>
+                  <button
+                    className={raceSessionTab === "qualifying" ? "active" : ""}
+                    onClick={() => setRaceSessionTab("qualifying")}
+                  >
+                    Qualifying
+                  </button>
+                </div>
+              </div>
+
+              <div className="table-scroll card-table-wrap">
+                {raceSessionTab === "results" ? (
+                  <table>
+                    <thead>
+                      <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
+                    </thead>
+                    <tbody>
+                      {race?.results?.length
+                        ? race.results.map((r) => (
+                          <tr key={r.position}>
+                            <td>{r.position}</td>
+                            <td className="avatar-cell"><DriverAvatar driverName={r.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                            <td>{r.driver}</td>
+                            <td>{r.team}</td>
+                            <td>{r.time}</td>
+                            <td>{r.points}</td>
+                          </tr>
+                        ))
+                        : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table>
+                    <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead>
+                    <tbody>
+                      {race?.qualifying?.length
+                        ? race.qualifying.map((q) => (
+                          <tr key={q.position}>
+                            <td>{q.position}</td>
+                            <td className="avatar-cell"><DriverAvatar driverName={q.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                            <td>{q.driver}</td>
+                            <td>{q.q1 || "-"}</td>
+                            <td>{q.q2 || "-"}</td>
+                            <td>{q.q3 || "-"}</td>
+                          </tr>
+                        ))
+                        : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
           <>
-            <h3>Sprint Result</h3>
-            <div className="table-scroll card-table-wrap">
-              <table>
-                <thead>
-                  <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
-                </thead>
-                <tbody>
-                  {race?.sprint?.length
-                    ? race.sprint.map((s) => (
-                      <tr key={`${s.position}-${s.driver}`}>
-                        <td>{s.position}</td>
-                        <td className="avatar-cell"><DriverAvatar driverName={s.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                        <td>{s.driver}</td>
-                        <td>{s.team}</td>
-                        <td>{s.time || "-"}</td>
-                        <td>{s.points}</td>
-                      </tr>
-                    ))
-                    : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
-                </tbody>
-              </table>
+            <div className="card top-card qualifying-stack-card">
+              <h3>Qualifying Results</h3>
+              <div className="table-scroll card-table-wrap">
+                <table>
+                  <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead>
+                  <tbody>
+                    {race?.qualifying?.length
+                      ? race.qualifying.map((q) => (
+                        <tr key={q.position}>
+                          <td>{q.position}</td>
+                          <td className="avatar-cell"><DriverAvatar driverName={q.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                          <td>{q.driver}</td>
+                          <td>{q.q1 || "-"}</td>
+                          <td>{q.q2 || "-"}</td>
+                          <td>{q.q3 || "-"}</td>
+                        </tr>
+                      ))
+                      : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="card top-card">
+              <h3>Round Results</h3>
+              <div className="small">{race?.race}</div>
+              <div className="table-scroll card-table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
+                  </thead>
+                  <tbody>
+                    {race?.results?.length
+                      ? race.results.map((r) => (
+                        <tr key={r.position}>
+                          <td>{r.position}</td>
+                          <td className="avatar-cell"><DriverAvatar driverName={r.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                          <td>{r.driver}</td>
+                          <td>{r.team}</td>
+                          <td>{r.time}</td>
+                          <td>{r.points}</td>
+                        </tr>
+                      ))
+                      : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}
-        <h3>Round Results</h3>
-        <div className="small">{race?.race}</div>
-        <div className="table-scroll card-table-wrap">
-          <table>
-            <thead>
-              <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
-            </thead>
-            <tbody>
-              {race?.results?.length
-                ? race.results.map((r) => (
-                  <tr key={r.position}>
-                    <td>{r.position}</td>
-                    <td className="avatar-cell"><DriverAvatar driverName={r.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                    <td>{r.driver}</td>
-                    <td>{r.team}</td>
-                    <td>{r.time}</td>
-                    <td>{r.points}</td>
-                  </tr>
-                ))
-                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        </div>
       </div>
 
       <div className="card progression-card">
@@ -640,6 +761,11 @@ function EngineeringPanel({ roundNo, race }) {
       { sector: "S3", time_s: Number(s3.toFixed(3)) },
     ];
   }, [analysis]);
+
+  const sectorBarColor = useMemo(
+    () => colorForTeam(analysis?.team, "#d7263d"),
+    [analysis]
+  );
 
   useEffect(() => {
     if (!drivers.length) {
@@ -993,8 +1119,14 @@ function EngineeringPanel({ roundNo, race }) {
         </div>
       </div>
 
-      <div className="card">
-        <h3>Lap Time Prediction Engine</h3>
+      <div className="card info-card">
+        <div className="card-title-row">
+          <h3>Lap Time Prediction Engine</h3>
+          <InfoHint
+            label="About lap time prediction engine"
+            content="Uses a synthetic LinearRegression model with tyre compound, synthetic sector profile, tyre age, and track temperature. Output is an estimated lap time, not direct live telemetry fitting."
+          />
+        </div>
         <div className="kpi">{analysis?.lap_prediction ? formatLapTimeSeconds(analysis.lap_prediction.predicted_lap_time_s) : "..."}</div>
         <p className="small">Model: {analysis?.lap_prediction?.model || "-"}</p>
         <p className="small">{analysis?.explanations?.lap_prediction || "-"}</p>
@@ -1026,28 +1158,46 @@ function EngineeringPanel({ roundNo, race }) {
         <p className="small">Negative lap delta means selected driver is faster than teammate.</p>
       </div>
 
-      <div className="card" style={{ minHeight: 280 }}>
-        <h3>Sector Time Decomposition</h3>
+      <div className="card info-card" style={{ minHeight: 280 }}>
+        <div className="card-title-row">
+          <h3>Sector Time Decomposition</h3>
+          <InfoHint
+            label="About sector time decomposition"
+            content="This chart splits predicted lap time into synthetic S1/S2/S3 percentages (33/40/27). It is for pace profiling, not measured sector timing."
+          />
+        </div>
         <ResponsiveContainer width="100%" height={210}>
           <BarChart data={sectorBreakdown}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="sector" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="time_s" fill="#d7263d" />
+            <Bar dataKey="time_s" fill={sectorBarColor} />
           </BarChart>
         </ResponsiveContainer>
         <p className="small">Synthetic split of predicted lap time into S1/S2/S3 for quick pace profiling.</p>
       </div>
 
-      <div className="card">
-        <h3>Race Engineer Radio</h3>
+      <div className="card info-card">
+        <div className="card-title-row">
+          <h3>Race Engineer Radio</h3>
+          <InfoHint
+            label="About race engineer radio"
+            content="This is an autogenerated call built from network risk, best pit-lap recommendation, and teammate lap delta. It is a rules-based advisory, not live team radio."
+          />
+        </div>
         <p className="small"><strong>Call:</strong> {engineerRadio?.call || "-"}</p>
         <p className="small"><strong>Confidence:</strong> {engineerRadio?.confidence || "-"}</p>
       </div>
 
-      <div className="card" style={{ minHeight: 300 }}>
-        <h3>Strategy Simulation (What-If)</h3>
+      <div className="card info-card" style={{ minHeight: 300 }}>
+        <div className="card-title-row">
+          <h3>Strategy Simulation (What-If)</h3>
+          <InfoHint
+            label="About strategy simulation"
+            content="Runs Monte Carlo simulations across the selected pit window. Total race time estimate combines base race time, tyre degradation trend, pit-stop delta, and traffic noise."
+          />
+        </div>
         <div className="form-row">
           <span className="small">Pit start</span>
           <input type="number" min="1" max="55" value={strategyInput.pit_window_start} onChange={(e) => setStrategyInput((s) => ({ ...s, pit_window_start: Number(e.target.value) || 1 }))} />
@@ -1067,8 +1217,14 @@ function EngineeringPanel({ roundNo, race }) {
         <p className="small">{analysis?.explanations?.strategy || "-"}</p>
       </div>
 
-      <div className="card" style={{ minHeight: 300 }}>
-        <h3>Communication Network Simulation (What-If)</h3>
+      <div className="card info-card" style={{ minHeight: 300 }}>
+        <div className="card-title-row">
+          <h3>Communication Network Simulation (What-If)</h3>
+          <InfoHint
+            label="About network simulation"
+            content="Simulates telemetry packet delivery with latency, jitter, packet loss, and bandwidth penalty. Higher average delay or loss increases strategy decision risk."
+          />
+        </div>
         <div className="form-row">
           <span className="small">Latency</span>
           <input type="number" min="1" max="200" value={networkInput.base_latency_ms} onChange={(e) => setNetworkInput((s) => ({ ...s, base_latency_ms: Number(e.target.value) || 1 }))} />
@@ -1148,7 +1304,6 @@ export default function App() {
     <div className="page">
       <section className="hero">
         <h1>Dual-Mode Formula 1 Analytics Platform</h1>
-        <div className="small">Fan Insights + Engineering Intelligence</div>
 
         <div className="track-ribbon">
           <span className="track-chip">{race?.track?.name || "Track loading..."}</span>
