@@ -92,6 +92,10 @@ button.active {
   grid-column: span 3;
 }
 
+.grid > .wide-card {
+  grid-column: 1 / -1;
+}
+
 .casual-layout {
   margin-top: 0.9rem;
   display: flex;
@@ -138,10 +142,6 @@ button.active {
 .card-table-wrap {
   max-height: 480px;
   overflow: auto;
-}
-
-.wide-card {
-  grid-column: 1 / -1;
 }
 
 .progression-card,
@@ -229,6 +229,113 @@ thead th {
   flex-wrap: wrap;
 }
 
+.engineering-panel-wrap {
+  margin-top: 0.9rem;
+}
+
+.engineering-tabbar {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.positions-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin-bottom: 0.55rem;
+}
+
+.position-selector {
+  position: relative;
+  min-width: 170px;
+}
+
+.position-selector summary {
+  list-style: none;
+  border: 1px solid #8a95a3;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.position-selector summary::-webkit-details-marker {
+  display: none;
+}
+
+.position-selector-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 12;
+  border: 1px solid #8a95a3;
+  background: #fff;
+  min-width: 170px;
+  max-height: 260px;
+  overflow: auto;
+  box-shadow: 0 8px 18px rgba(16, 19, 23, 0.16);
+}
+
+.position-selector-actions {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border-bottom: 1px solid #ced4dc;
+}
+
+.position-selector-actions button {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
+}
+
+.position-selector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.3rem 0.35rem 0.45rem;
+}
+
+.position-selector-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.position-driver-legend {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.position-tooltip {
+  background: #0f1729;
+  border: 1px solid #2a364d;
+  color: #d4d9e1;
+  min-width: 125px;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+}
+
+.position-tooltip-title {
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px dashed #2a364d;
+  padding-bottom: 0.18rem;
+}
+
+.position-tooltip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+}
+
 input,
 select {
   padding: 0.28rem 0.36rem;
@@ -275,5 +382,20 @@ select {
 
   .card-table-wrap {
     max-height: 280px;
+  }
+
+  .positions-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .position-selector {
+    width: 100%;
+  }
+
+  .position-selector-menu {
+    left: 0;
+    right: auto;
+    width: 100%;
   }
 }

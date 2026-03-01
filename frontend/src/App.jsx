@@ -16,6 +16,7 @@ import {
   getRoundResults,
   getRoundsSummary,
   getEngineeringDriverAnalysis,
+  getEngineeringPositions,
   simulateNetwork,
   simulateStrategy,
 } from "./api";
@@ -223,6 +224,20 @@ function colorForDriver(driverName, driverTeamMap, index) {
   return `hsl(${fallbackHue} 70% 42%)`;
 }
 
+function driverCode(driverName) {
+  const parts = String(driverName || "").trim().split(/\s+/);
+  const seed = parts.length ? parts[parts.length - 1] : driverName;
+  return String(seed || "").slice(0, 3).toUpperCase();
+}
+
+function formatLapTimeSeconds(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) return "-";
+  const mins = Math.floor(value / 60);
+  const secs = value - (mins * 60);
+  return `${mins}:${secs.toFixed(3).padStart(6, "0")}`;
+}
+
 function ProgressionTooltip({ active, label, payload }) {
   if (!active || !payload?.length) return null;
 
@@ -282,6 +297,60 @@ function ConstructorProgressionTooltip({ active, label, payload }) {
         {orderedForTwoCols.map((item) => (
           <div key={item.name} style={{ color: item.color || "#111", lineHeight: 1.2, fontSize: "0.82rem", whiteSpace: "nowrap" }}>
             {item.rank}. {item.name} : {item.value}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PositionTooltip({
+  active,
+  label,
+  lapRowsByLap,
+  driverColors,
+  allDrivers,
+  dnfDriversSet,
+  lastSeenLapByDriver,
+  lastSeenPositionByDriver,
+}) {
+  if (!active || !Number.isFinite(Number(label))) {
+    return null;
+  }
+  const lap = Number(label);
+  const row = lapRowsByLap[lap];
+  if (!row) {
+    return null;
+  }
+
+  const items = (allDrivers || []).map((driver) => {
+    const value = row[driver];
+    if (Number.isFinite(value)) {
+      return { driver, rankValue: Number(value), display: `P${value}` };
+    }
+    const lastSeen = lastSeenLapByDriver?.[driver] ?? -1;
+    const lastPos = lastSeenPositionByDriver?.[driver];
+    if (dnfDriversSet?.has(driver) && lap > lastSeen) {
+      return { driver, rankValue: 999, display: "(DNF)" };
+    }
+    if (Number.isFinite(lastPos)) {
+      return { driver, rankValue: Number(lastPos), display: `P${lastPos}` };
+    }
+    return { driver, rankValue: 1000, display: "-" };
+  });
+
+  const ordered = items.sort((a, b) => {
+    if (a.rankValue !== b.rankValue) return a.rankValue - b.rankValue;
+    return a.driver.localeCompare(b.driver);
+  });
+
+  return (
+    <div className="position-tooltip">
+      <div className="position-tooltip-title">Lap {lap}</div>
+      <div className="position-tooltip-list">
+        {ordered.map((item) => (
+          <div key={item.driver} style={{ color: driverColors[item.driver] || "#d4d9e1" }}>
+            {driverCode(item.driver)} : {item.display}
           </div>
         ))}
       </div>
@@ -528,9 +597,14 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
 }
 
 function EngineeringPanel({ roundNo, race }) {
+  const [engineeringTab, setEngineeringTab] = useState("whatif");
   const [driver, setDriver] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [teammateAnalysis, setTeammateAnalysis] = useState(null);
+  const [positionsData, setPositionsData] = useState(null);
+  const [positionsLoading, setPositionsLoading] = useState(false);
+  const [positionsError, setPositionsError] = useState("");
+  const [selectedPositionDrivers, setSelectedPositionDrivers] = useState([]);
   const [networkInput, setNetworkInput] = useState({
     packets: 180,
     base_latency_ms: 50,
@@ -598,6 +672,24 @@ function EngineeringPanel({ roundNo, race }) {
     simulateStrategy(strategyInput).then(setStrategyWhatIf);
   }, [strategyInput]);
 
+  useEffect(() => {
+    if (!roundNo) return;
+    const season = race?.season || 2025;
+    setPositionsLoading(true);
+    setPositionsError("");
+    getEngineeringPositions(roundNo, season)
+      .then((data) => {
+        setPositionsData(data);
+        const allDrivers = (data?.drivers || []).map((d) => d.driver);
+        setSelectedPositionDrivers(allDrivers);
+      })
+      .catch(() => {
+        setPositionsError("Unable to load lap-by-lap positions.");
+        setPositionsData(null);
+      })
+      .finally(() => setPositionsLoading(false));
+  }, [roundNo, race?.season]);
+
   const telemetryGraph = (analysis?.telemetry?.smoothed?.speed || []).map((s, i) => ({
     idx: i,
     speed: s,
@@ -654,7 +746,235 @@ function EngineeringPanel({ roundNo, race }) {
     };
   }, [analysis, networkWhatIf, strategyWhatIf, strategyInput, telemetryDelta]);
 
-  return (
+  const positionDriverTeamMap = useMemo(() => {
+    const map = {};
+    for (const result of race?.results || []) {
+      map[result.driver] = result.team;
+    }
+    for (const item of positionsData?.drivers || []) {
+      if (item.driver && item.team) {
+        map[item.driver] = item.team;
+      }
+    }
+    return map;
+  }, [race, positionsData]);
+
+  const positionDrivers = useMemo(
+    () => (positionsData?.drivers || []).map((d) => d.driver),
+    [positionsData]
+  );
+
+  const positionDriverColors = useMemo(() => {
+    const map = {};
+    for (const [idx, name] of positionDrivers.entries()) {
+      map[name] = colorForDriver(name, positionDriverTeamMap, idx);
+    }
+    return map;
+  }, [positionDrivers, positionDriverTeamMap]);
+
+  const visiblePositionDrivers = useMemo(() => {
+    if (!selectedPositionDrivers.length) return [];
+    const selected = new Set(selectedPositionDrivers);
+    return positionDrivers.filter((name) => selected.has(name));
+  }, [positionDrivers, selectedPositionDrivers]);
+
+  const lapRowsByLap = useMemo(() => {
+    const map = {};
+    for (const row of positionsData?.laps || []) {
+      map[Number(row.lap)] = row;
+    }
+    return map;
+  }, [positionsData]);
+
+  const maxPositionValue = useMemo(() => {
+    if (positionsData?.max_position) return positionsData.max_position;
+    return Math.max(20, positionDrivers.length || 20);
+  }, [positionsData, positionDrivers]);
+
+  const positionTicks = useMemo(() => {
+    const ticks = [1];
+    for (let p = 5; p <= maxPositionValue; p += 5) {
+      ticks.push(p);
+    }
+    if (maxPositionValue > 1 && !ticks.includes(maxPositionValue)) {
+      ticks.push(maxPositionValue);
+    }
+    return ticks;
+  }, [maxPositionValue]);
+
+  const maxLapValue = useMemo(() => {
+    const laps = positionsData?.laps || [];
+    if (!laps.length) return 0;
+    return laps.reduce((acc, row) => Math.max(acc, Number(row.lap) || 0), 0);
+  }, [positionsData]);
+
+  const minLapValue = useMemo(() => {
+    const laps = positionsData?.laps || [];
+    if (!laps.length) return 0;
+    return laps.reduce((acc, row) => Math.min(acc, Number(row.lap) || 0), Number(laps[0].lap) || 0);
+  }, [positionsData]);
+
+  const dnfDriversSet = useMemo(() => new Set(positionsData?.dnf_drivers || []), [positionsData]);
+
+  const lastSeenLapByDriver = useMemo(() => {
+    const last = {};
+    for (const row of positionsData?.laps || []) {
+      const lap = Number(row.lap);
+      for (const driver of positionDrivers) {
+        if (Number.isFinite(row[driver])) {
+          last[driver] = lap;
+        }
+      }
+    }
+    return last;
+  }, [positionsData, positionDrivers]);
+
+  const lastSeenPositionByDriver = useMemo(() => {
+    const lastPos = {};
+    for (const row of positionsData?.laps || []) {
+      for (const driver of positionDrivers) {
+        if (Number.isFinite(row[driver])) {
+          lastPos[driver] = Number(row[driver]);
+        }
+      }
+    }
+    return lastPos;
+  }, [positionsData, positionDrivers]);
+
+  const dashedDriversSet = useMemo(() => {
+    const teamToDrivers = new Map();
+    for (const driverName of positionDrivers) {
+      const team = positionDriverTeamMap[driverName];
+      if (!team) continue;
+      if (!teamToDrivers.has(team)) {
+        teamToDrivers.set(team, []);
+      }
+      teamToDrivers.get(team).push(driverName);
+    }
+
+    const set = new Set();
+    for (const driversInTeam of teamToDrivers.values()) {
+      const ordered = [...driversInTeam].sort((a, b) => a.localeCompare(b));
+      // Pick one stable representative per team for dashed style.
+      const pick = ordered[ordered.length - 1];
+      if (pick) {
+        set.add(pick);
+      }
+    }
+    return set;
+  }, [positionDrivers, positionDriverTeamMap]);
+
+  const togglePositionDriver = (driverName) => {
+    setSelectedPositionDrivers((current) => {
+      if (current.includes(driverName)) {
+        return current.filter((item) => item !== driverName);
+      }
+      return [...current, driverName];
+    });
+  };
+
+  const selectAllPositionDrivers = () => setSelectedPositionDrivers(positionDrivers);
+  const clearAllPositionDrivers = () => setSelectedPositionDrivers([]);
+
+  const renderPositionsTab = () => (
+    <div className="grid">
+      <div className="card wide-card">
+        <div className="positions-head">
+          <div>
+            <h3>Lap-by-Lap Position Changes</h3>
+            <div className="small">Track driver positions throughout the race. Use selector to filter.</div>
+          </div>
+          <details className="position-selector">
+            <summary>{visiblePositionDrivers.length ? `${visiblePositionDrivers.length} Drivers` : "No Drivers"}</summary>
+            <div className="position-selector-menu">
+              <div className="position-selector-actions">
+                <button type="button" onClick={selectAllPositionDrivers}>All</button>
+                <button type="button" onClick={clearAllPositionDrivers}>None</button>
+              </div>
+              <div className="position-selector-list">
+                {positionDrivers.map((name) => {
+                  const checked = selectedPositionDrivers.includes(name);
+                  return (
+                    <label key={name}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => togglePositionDriver(name)}
+                      />
+                      <span style={{ color: positionDriverColors[name] || "#1d2c3f" }}>{driverCode(name)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {positionsLoading ? <div className="small">Loading lap positions...</div> : null}
+        {positionsError ? <div className="small">{positionsError}</div> : null}
+        {!positionsLoading && !positionsError ? (
+          <div style={{ width: "100%", height: "680px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={positionsData?.laps || []}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="lap"
+                  type="number"
+                  allowDecimals={false}
+                  domain={[minLapValue, maxLapValue || 1]}
+                  tickCount={Math.min(14, Math.max(6, Math.floor((maxLapValue || 1) / 4)))}
+                />
+                <YAxis
+                  type="number"
+                  reversed
+                  domain={[0.5, maxPositionValue + 0.5]}
+                  ticks={positionTicks}
+                  allowDecimals={false}
+                  tickFormatter={(val) => `P${val}`}
+                />
+                <Tooltip
+                  content={
+                    <PositionTooltip
+                      lapRowsByLap={lapRowsByLap}
+                      driverColors={positionDriverColors}
+                      allDrivers={positionDrivers}
+                      dnfDriversSet={dnfDriversSet}
+                      lastSeenLapByDriver={lastSeenLapByDriver}
+                      lastSeenPositionByDriver={lastSeenPositionByDriver}
+                    />
+                  }
+                />
+                {visiblePositionDrivers.map((name) => (
+                  <Line
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stroke={positionDriverColors[name] || "#334155"}
+                    strokeWidth={2}
+                    strokeDasharray={dashedDriversSet.has(name) ? "6 4" : undefined}
+                    dot={false}
+                    connectNulls={false}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : null}
+
+        <div className="position-driver-legend">
+          <span style={{ color: "#5e6773" }}>QUALIFYING RESULTS:</span>
+          {visiblePositionDrivers.map((name) => (
+            <span key={name} style={{ color: positionDriverColors[name] || "#111" }}>
+              {dashedDriversSet.has(name) ? `${driverCode(name)} (dashed)` : driverCode(name)}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWhatIfTab = () => (
     <div className="grid">
       <div className="card">
         <h3>Engineering View Controls</h3>
@@ -675,7 +995,7 @@ function EngineeringPanel({ roundNo, race }) {
 
       <div className="card">
         <h3>Lap Time Prediction Engine</h3>
-        <div className="kpi">{analysis?.lap_prediction ? `${analysis.lap_prediction.predicted_lap_time_s}s` : "..."}</div>
+        <div className="kpi">{analysis?.lap_prediction ? formatLapTimeSeconds(analysis.lap_prediction.predicted_lap_time_s) : "..."}</div>
         <p className="small">Model: {analysis?.lap_prediction?.model || "-"}</p>
         <p className="small">{analysis?.explanations?.lap_prediction || "-"}</p>
       </div>
@@ -769,6 +1089,28 @@ function EngineeringPanel({ roundNo, race }) {
       </div>
     </div>
   );
+
+  const renderDiagnosticsTab = () => (
+    <div className="grid">
+      <div className="card wide-card">
+        <h3>Coming Soon</h3>
+        <div className="small">More features are coming soon. Stay tuned.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="engineering-panel-wrap">
+      <div className="engineering-tabbar">
+        <button className={engineeringTab === "whatif" ? "active" : ""} onClick={() => setEngineeringTab("whatif")}>Race Engineer</button>
+        <button className={engineeringTab === "positions" ? "active" : ""} onClick={() => setEngineeringTab("positions")}>Lap-by-Lap</button>
+        <button className={engineeringTab === "diagnostics" ? "active" : ""} onClick={() => setEngineeringTab("diagnostics")}>COMING SOON</button>
+      </div>
+      {engineeringTab === "whatif" ? renderWhatIfTab() : null}
+      {engineeringTab === "positions" ? renderPositionsTab() : null}
+      {engineeringTab === "diagnostics" ? renderDiagnosticsTab() : null}
+    </div>
+  );
 }
 
 export default function App() {
@@ -817,7 +1159,7 @@ export default function App() {
 
         <div className="mode-switch">
           <button className={mode === "casual" ? "active" : ""} onClick={() => setMode("casual")}>Casual Mode</button>
-          <button className={mode === "engineering" ? "active" : ""} onClick={() => setMode("engineering")}>Engineering Nerd Mode</button>
+          <button className={mode === "engineering" ? "active" : ""} onClick={() => setMode("engineering")}>Nerd Mode</button>
           <div className="form-row">
             <span className="small">Season</span>
             <select value={season} onChange={(e) => setSeason(Number(e.target.value) || 2025)}>

@@ -64,3 +64,8 @@ export async function simulateNetwork(payload) {
   });
   return res.json();
 }
+
+export async function getEngineeringPositions(roundNo, season) {
+  const res = await fetch(`${API_BASE}/api/engineering/positions/${roundNo}?season=${season}`);
+  return res.json();
+}
