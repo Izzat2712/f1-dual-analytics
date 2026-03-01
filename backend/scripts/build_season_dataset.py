@@ -41,8 +41,8 @@ def main() -> None:
         build_many(args.start, args.end, args.force_refresh)
         return
 
-    load_or_build_season(2025, force_refresh=args.force_refresh)
-    print("Built season 2025")
+    load_or_build_season(2026, force_refresh=args.force_refresh)
+    print("Built season 2026")
 
 
 if __name__ == "__main__":

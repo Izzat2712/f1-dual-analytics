@@ -15,18 +15,43 @@ DRIVERS_DIR = ASSETS / "drivers"
 TEAMS_DIR = ASSETS / "teams"
 
 TEAM_URLS = {
-    "McLaren": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/mclaren.png",
-    "Red Bull": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/red-bull-racing.png",
-    "Ferrari": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/ferrari.png",
-    "Mercedes": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/mercedes.png",
-    "Aston Martin": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/aston-martin.png",
-    "Williams": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/williams.png",
-    "RB F1 Team": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/rb.png",
-    "Haas F1 Team": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/haas-f1-team.png",
-    "Sauber": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/kick-sauber.png",
-    "Alpine F1 Team": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2025/alpine.png",
-    "Alfa Romeo": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2023/alfa-romeo.png",
-    "AlphaTauri": "https://media.formula1.com/image/upload/f_auto,q_auto/content/dam/fom-website/teams/2023/alphatauri.png",
+    "McLaren": "mclaren",
+    "Red Bull": "redbullracing",
+    "Ferrari": "ferrari",
+    "Mercedes": "mercedes",
+    "Aston Martin": "astonmartin",
+    "Williams": "williams",
+    "RB F1 Team": "racingbulls",
+    "Racing Bulls": "racingbulls",
+    "Haas F1 Team": "haas",
+    "Haas": "haas",
+    "Sauber": "sauber",
+    "Kick Sauber": "sauber",
+    "Audi": "audi",
+    "Alpine F1 Team": "alpine",
+    "Alpine": "alpine",
+    "Cadillac": "cadillac",
+    "Alfa Romeo": "alfaromeo",
+    "AlphaTauri": "alphatauri",
+    "Red Bull Racing": "redbullracing",
+}
+
+SEASON_DRIVER_FALLBACK_YEARS = [2026, 2025, 2024, 2023, 2022, 2021]
+
+DEFAULT_TEAMS_BY_SEASON = {
+    2026: {
+        "McLaren",
+        "Red Bull",
+        "Ferrari",
+        "Mercedes",
+        "Aston Martin",
+        "Williams",
+        "RB F1 Team",
+        "Haas F1 Team",
+        "Audi",
+        "Alpine F1 Team",
+        "Cadillac",
+    }
 }
 
 DRIVER_SLUGS = {
@@ -99,12 +124,31 @@ def fetch_bytes(url: str, attempts: int = 2) -> bytes | None:
     return None
 
 
+def build_2026_team_logo_url(team_media_id: str) -> str:
+    return (
+        "https://media.formula1.com/image/upload/"
+        "f_png,c_lfill,w_512/"
+        "d_common:f1:2026:fallback:car:2026fallbackcarright.webp/"
+        f"v1740000000/common/f1/2026/{team_media_id}/2026{team_media_id}carright.webp"
+    )
+
+
+def team_media_id_for_season(team_name: str, season: int) -> str | None:
+    # For 2026 onward, treat Sauber naming as Audi branding.
+    if season >= 2026 and team_name in {"Sauber", "Kick Sauber"}:
+        return "audi"
+    return TEAM_URLS.get(team_name)
+
+
 def read_drivers_and_teams() -> tuple[dict[int, set[str]], dict[int, set[str]], dict[int, set[int]]]:
     drivers_by_season: dict[int, set[str]] = {}
     teams_by_season: dict[int, set[str]] = {}
     rounds_by_season: dict[int, set[int]] = {}
-    for season in range(2021, 2026):
-        path = DATA_ROOT / f"season_{season}.json"
+    for path in sorted(DATA_ROOT.glob("season_*.json")):
+        try:
+            season = int(path.stem.split("_", 1)[1])
+        except (IndexError, ValueError):
+            continue
         if not path.exists():
             continue
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -146,6 +190,7 @@ def read_drivers_and_teams() -> tuple[dict[int, set[str]], dict[int, set[str]], 
                 if entry.get("team"):
                     season_teams.add(entry["team"])
 
+        season_teams.update(DEFAULT_TEAMS_BY_SEASON.get(season, set()))
         drivers_by_season[season] = season_drivers
         teams_by_season[season] = season_teams
         rounds_by_season[season] = season_rounds
@@ -194,7 +239,7 @@ def main() -> None:
             )
             data = fetch_bytes(url)
             if not data:
-                for alt in [2025, 2024, 2023, 2022, 2021]:
+                for alt in SEASON_DRIVER_FALLBACK_YEARS:
                     if alt == season:
                         continue
                     alt_url = (
@@ -223,9 +268,10 @@ def main() -> None:
         season_team_dir = TEAMS_DIR / str(season)
         season_team_dir.mkdir(parents=True, exist_ok=True)
         for team in sorted(season_teams):
-            url = TEAM_URLS.get(team)
-            if not url:
+            team_media_id = team_media_id_for_season(team, season)
+            if not team_media_id:
                 continue
+            url = build_2026_team_logo_url(team_media_id)
             slug = slugify_team(team)
             target = TEAMS_DIR / f"{slug}.png"
             season_target = season_team_dir / f"{slug}.png"

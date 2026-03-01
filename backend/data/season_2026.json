@@ -1,0 +1,1288 @@
+{
+  "season": 2026,
+  "generated_from": "https://api.jolpi.ca/ergast/f1",
+  "driver_standings": [],
+  "constructor_standings": [],
+  "progression_drivers": [],
+  "points_progression": [
+    {
+      "round": 1
+    },
+    {
+      "round": 2
+    },
+    {
+      "round": 3
+    },
+    {
+      "round": 4
+    },
+    {
+      "round": 5
+    },
+    {
+      "round": 6
+    },
+    {
+      "round": 7
+    },
+    {
+      "round": 8
+    },
+    {
+      "round": 9
+    },
+    {
+      "round": 10
+    },
+    {
+      "round": 11
+    },
+    {
+      "round": 12
+    },
+    {
+      "round": 13
+    },
+    {
+      "round": 14
+    },
+    {
+      "round": 15
+    },
+    {
+      "round": 16
+    },
+    {
+      "round": 17
+    },
+    {
+      "round": 18
+    },
+    {
+      "round": 19
+    },
+    {
+      "round": 20
+    },
+    {
+      "round": 21
+    },
+    {
+      "round": 22
+    },
+    {
+      "round": 23
+    },
+    {
+      "round": 24
+    }
+  ],
+  "progression_constructors": [],
+  "constructor_points_progression": [
+    {
+      "round": 1
+    },
+    {
+      "round": 2
+    },
+    {
+      "round": 3
+    },
+    {
+      "round": 4
+    },
+    {
+      "round": 5
+    },
+    {
+      "round": 6
+    },
+    {
+      "round": 7
+    },
+    {
+      "round": 8
+    },
+    {
+      "round": 9
+    },
+    {
+      "round": 10
+    },
+    {
+      "round": 11
+    },
+    {
+      "round": 12
+    },
+    {
+      "round": 13
+    },
+    {
+      "round": 14
+    },
+    {
+      "round": 15
+    },
+    {
+      "round": 16
+    },
+    {
+      "round": 17
+    },
+    {
+      "round": 18
+    },
+    {
+      "round": 19
+    },
+    {
+      "round": 20
+    },
+    {
+      "round": 21
+    },
+    {
+      "round": 22
+    },
+    {
+      "round": 23
+    },
+    {
+      "round": 24
+    }
+  ],
+  "rounds_summary": [
+    {
+      "round": 1,
+      "race_name": "Australian Grand Prix",
+      "date": "2026-03-08",
+      "circuit": "Albert Park Grand Prix Circuit",
+      "country": "Australia",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 2,
+      "race_name": "Chinese Grand Prix",
+      "date": "2026-03-15",
+      "circuit": "Shanghai International Circuit",
+      "country": "China",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 3,
+      "race_name": "Japanese Grand Prix",
+      "date": "2026-03-29",
+      "circuit": "Suzuka Circuit",
+      "country": "Japan",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 4,
+      "race_name": "Bahrain Grand Prix",
+      "date": "2026-04-12",
+      "circuit": "Bahrain International Circuit",
+      "country": "Bahrain",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 5,
+      "race_name": "Saudi Arabian Grand Prix",
+      "date": "2026-04-19",
+      "circuit": "Jeddah Corniche Circuit",
+      "country": "Saudi Arabia",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 6,
+      "race_name": "Miami Grand Prix",
+      "date": "2026-05-03",
+      "circuit": "Miami International Autodrome",
+      "country": "USA",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 7,
+      "race_name": "Canadian Grand Prix",
+      "date": "2026-05-24",
+      "circuit": "Circuit Gilles Villeneuve",
+      "country": "Canada",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 8,
+      "race_name": "Monaco Grand Prix",
+      "date": "2026-06-07",
+      "circuit": "Circuit de Monaco",
+      "country": "Monaco",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 9,
+      "race_name": "Barcelona Grand Prix",
+      "date": "2026-06-14",
+      "circuit": "Circuit de Barcelona-Catalunya",
+      "country": "Spain",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 10,
+      "race_name": "Austrian Grand Prix",
+      "date": "2026-06-28",
+      "circuit": "Red Bull Ring",
+      "country": "Austria",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 11,
+      "race_name": "British Grand Prix",
+      "date": "2026-07-05",
+      "circuit": "Silverstone Circuit",
+      "country": "UK",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 12,
+      "race_name": "Belgian Grand Prix",
+      "date": "2026-07-19",
+      "circuit": "Circuit de Spa-Francorchamps",
+      "country": "Belgium",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 13,
+      "race_name": "Hungarian Grand Prix",
+      "date": "2026-07-26",
+      "circuit": "Hungaroring",
+      "country": "Hungary",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 14,
+      "race_name": "Dutch Grand Prix",
+      "date": "2026-08-23",
+      "circuit": "Circuit Park Zandvoort",
+      "country": "Netherlands",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 15,
+      "race_name": "Italian Grand Prix",
+      "date": "2026-09-06",
+      "circuit": "Autodromo Nazionale di Monza",
+      "country": "Italy",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 16,
+      "race_name": "Spanish Grand Prix",
+      "date": "2026-09-13",
+      "circuit": "Madring",
+      "country": "Spain",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 17,
+      "race_name": "Azerbaijan Grand Prix",
+      "date": "2026-09-26",
+      "circuit": "Baku City Circuit",
+      "country": "Azerbaijan",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 18,
+      "race_name": "Singapore Grand Prix",
+      "date": "2026-10-11",
+      "circuit": "Marina Bay Street Circuit",
+      "country": "Singapore",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 19,
+      "race_name": "United States Grand Prix",
+      "date": "2026-10-25",
+      "circuit": "Circuit of the Americas",
+      "country": "USA",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 20,
+      "race_name": "Mexico City Grand Prix",
+      "date": "2026-11-01",
+      "circuit": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
+      "country": "Mexico",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 21,
+      "race_name": "Brazilian Grand Prix",
+      "date": "2026-11-08",
+      "circuit": "Aut\u00f3dromo Jos\u00e9 Carlos Pace",
+      "country": "Brazil",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 22,
+      "race_name": "Las Vegas Grand Prix",
+      "date": "2026-11-22",
+      "circuit": "Las Vegas Strip Street Circuit",
+      "country": "USA",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 23,
+      "race_name": "Qatar Grand Prix",
+      "date": "2026-11-29",
+      "circuit": "Losail International Circuit",
+      "country": "Qatar",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    },
+    {
+      "round": 24,
+      "race_name": "Abu Dhabi Grand Prix",
+      "date": "2026-12-06",
+      "circuit": "Yas Marina Circuit",
+      "country": "UAE",
+      "winner": null,
+      "winner_team": null,
+      "pole": null,
+      "pole_time": null,
+      "fastest_lap_driver": null,
+      "fastest_lap_time": null,
+      "had_sprint": false
+    }
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "race": "Australian Grand Prix",
+      "date": "2026-03-08",
+      "track": {
+        "name": "Albert Park Grand Prix Circuit",
+        "country": "Australia",
+        "locality": "Melbourne"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 1,
+        "race_name": "Australian Grand Prix",
+        "date": "2026-03-08",
+        "circuit": "Albert Park Grand Prix Circuit",
+        "country": "Australia",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 2,
+      "race": "Chinese Grand Prix",
+      "date": "2026-03-15",
+      "track": {
+        "name": "Shanghai International Circuit",
+        "country": "China",
+        "locality": "Shanghai"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 2,
+        "race_name": "Chinese Grand Prix",
+        "date": "2026-03-15",
+        "circuit": "Shanghai International Circuit",
+        "country": "China",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 3,
+      "race": "Japanese Grand Prix",
+      "date": "2026-03-29",
+      "track": {
+        "name": "Suzuka Circuit",
+        "country": "Japan",
+        "locality": "Suzuka"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 3,
+        "race_name": "Japanese Grand Prix",
+        "date": "2026-03-29",
+        "circuit": "Suzuka Circuit",
+        "country": "Japan",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 4,
+      "race": "Bahrain Grand Prix",
+      "date": "2026-04-12",
+      "track": {
+        "name": "Bahrain International Circuit",
+        "country": "Bahrain",
+        "locality": "Sakhir"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 4,
+        "race_name": "Bahrain Grand Prix",
+        "date": "2026-04-12",
+        "circuit": "Bahrain International Circuit",
+        "country": "Bahrain",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 5,
+      "race": "Saudi Arabian Grand Prix",
+      "date": "2026-04-19",
+      "track": {
+        "name": "Jeddah Corniche Circuit",
+        "country": "Saudi Arabia",
+        "locality": "Jeddah"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 5,
+        "race_name": "Saudi Arabian Grand Prix",
+        "date": "2026-04-19",
+        "circuit": "Jeddah Corniche Circuit",
+        "country": "Saudi Arabia",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 6,
+      "race": "Miami Grand Prix",
+      "date": "2026-05-03",
+      "track": {
+        "name": "Miami International Autodrome",
+        "country": "USA",
+        "locality": "Miami"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 6,
+        "race_name": "Miami Grand Prix",
+        "date": "2026-05-03",
+        "circuit": "Miami International Autodrome",
+        "country": "USA",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 7,
+      "race": "Canadian Grand Prix",
+      "date": "2026-05-24",
+      "track": {
+        "name": "Circuit Gilles Villeneuve",
+        "country": "Canada",
+        "locality": "Montreal"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 7,
+        "race_name": "Canadian Grand Prix",
+        "date": "2026-05-24",
+        "circuit": "Circuit Gilles Villeneuve",
+        "country": "Canada",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 8,
+      "race": "Monaco Grand Prix",
+      "date": "2026-06-07",
+      "track": {
+        "name": "Circuit de Monaco",
+        "country": "Monaco",
+        "locality": "Monte Carlo"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 8,
+        "race_name": "Monaco Grand Prix",
+        "date": "2026-06-07",
+        "circuit": "Circuit de Monaco",
+        "country": "Monaco",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 9,
+      "race": "Barcelona Grand Prix",
+      "date": "2026-06-14",
+      "track": {
+        "name": "Circuit de Barcelona-Catalunya",
+        "country": "Spain",
+        "locality": "Barcelona"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 9,
+        "race_name": "Barcelona Grand Prix",
+        "date": "2026-06-14",
+        "circuit": "Circuit de Barcelona-Catalunya",
+        "country": "Spain",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 10,
+      "race": "Austrian Grand Prix",
+      "date": "2026-06-28",
+      "track": {
+        "name": "Red Bull Ring",
+        "country": "Austria",
+        "locality": "Spielberg"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 10,
+        "race_name": "Austrian Grand Prix",
+        "date": "2026-06-28",
+        "circuit": "Red Bull Ring",
+        "country": "Austria",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 11,
+      "race": "British Grand Prix",
+      "date": "2026-07-05",
+      "track": {
+        "name": "Silverstone Circuit",
+        "country": "UK",
+        "locality": "Silverstone"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 11,
+        "race_name": "British Grand Prix",
+        "date": "2026-07-05",
+        "circuit": "Silverstone Circuit",
+        "country": "UK",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 12,
+      "race": "Belgian Grand Prix",
+      "date": "2026-07-19",
+      "track": {
+        "name": "Circuit de Spa-Francorchamps",
+        "country": "Belgium",
+        "locality": "Spa"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 12,
+        "race_name": "Belgian Grand Prix",
+        "date": "2026-07-19",
+        "circuit": "Circuit de Spa-Francorchamps",
+        "country": "Belgium",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 13,
+      "race": "Hungarian Grand Prix",
+      "date": "2026-07-26",
+      "track": {
+        "name": "Hungaroring",
+        "country": "Hungary",
+        "locality": "Budapest"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 13,
+        "race_name": "Hungarian Grand Prix",
+        "date": "2026-07-26",
+        "circuit": "Hungaroring",
+        "country": "Hungary",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 14,
+      "race": "Dutch Grand Prix",
+      "date": "2026-08-23",
+      "track": {
+        "name": "Circuit Park Zandvoort",
+        "country": "Netherlands",
+        "locality": "Zandvoort"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 14,
+        "race_name": "Dutch Grand Prix",
+        "date": "2026-08-23",
+        "circuit": "Circuit Park Zandvoort",
+        "country": "Netherlands",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 15,
+      "race": "Italian Grand Prix",
+      "date": "2026-09-06",
+      "track": {
+        "name": "Autodromo Nazionale di Monza",
+        "country": "Italy",
+        "locality": "Monza"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 15,
+        "race_name": "Italian Grand Prix",
+        "date": "2026-09-06",
+        "circuit": "Autodromo Nazionale di Monza",
+        "country": "Italy",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 16,
+      "race": "Spanish Grand Prix",
+      "date": "2026-09-13",
+      "track": {
+        "name": "Madring",
+        "country": "Spain",
+        "locality": "Madrid"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 16,
+        "race_name": "Spanish Grand Prix",
+        "date": "2026-09-13",
+        "circuit": "Madring",
+        "country": "Spain",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 17,
+      "race": "Azerbaijan Grand Prix",
+      "date": "2026-09-26",
+      "track": {
+        "name": "Baku City Circuit",
+        "country": "Azerbaijan",
+        "locality": "Baku"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 17,
+        "race_name": "Azerbaijan Grand Prix",
+        "date": "2026-09-26",
+        "circuit": "Baku City Circuit",
+        "country": "Azerbaijan",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 18,
+      "race": "Singapore Grand Prix",
+      "date": "2026-10-11",
+      "track": {
+        "name": "Marina Bay Street Circuit",
+        "country": "Singapore",
+        "locality": "Marina Bay"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 18,
+        "race_name": "Singapore Grand Prix",
+        "date": "2026-10-11",
+        "circuit": "Marina Bay Street Circuit",
+        "country": "Singapore",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 19,
+      "race": "United States Grand Prix",
+      "date": "2026-10-25",
+      "track": {
+        "name": "Circuit of the Americas",
+        "country": "USA",
+        "locality": "Austin"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 19,
+        "race_name": "United States Grand Prix",
+        "date": "2026-10-25",
+        "circuit": "Circuit of the Americas",
+        "country": "USA",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 20,
+      "race": "Mexico City Grand Prix",
+      "date": "2026-11-01",
+      "track": {
+        "name": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
+        "country": "Mexico",
+        "locality": "Mexico City"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 20,
+        "race_name": "Mexico City Grand Prix",
+        "date": "2026-11-01",
+        "circuit": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
+        "country": "Mexico",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 21,
+      "race": "Brazilian Grand Prix",
+      "date": "2026-11-08",
+      "track": {
+        "name": "Aut\u00f3dromo Jos\u00e9 Carlos Pace",
+        "country": "Brazil",
+        "locality": "S\u00e3o Paulo"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 21,
+        "race_name": "Brazilian Grand Prix",
+        "date": "2026-11-08",
+        "circuit": "Aut\u00f3dromo Jos\u00e9 Carlos Pace",
+        "country": "Brazil",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 22,
+      "race": "Las Vegas Grand Prix",
+      "date": "2026-11-22",
+      "track": {
+        "name": "Las Vegas Strip Street Circuit",
+        "country": "USA",
+        "locality": "Las Vegas"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 22,
+        "race_name": "Las Vegas Grand Prix",
+        "date": "2026-11-22",
+        "circuit": "Las Vegas Strip Street Circuit",
+        "country": "USA",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 23,
+      "race": "Qatar Grand Prix",
+      "date": "2026-11-29",
+      "track": {
+        "name": "Losail International Circuit",
+        "country": "Qatar",
+        "locality": "Lusail"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 23,
+        "race_name": "Qatar Grand Prix",
+        "date": "2026-11-29",
+        "circuit": "Losail International Circuit",
+        "country": "Qatar",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    },
+    {
+      "round": 24,
+      "race": "Abu Dhabi Grand Prix",
+      "date": "2026-12-06",
+      "track": {
+        "name": "Yas Marina Circuit",
+        "country": "UAE",
+        "locality": "Abu Dhabi"
+      },
+      "results": [],
+      "sprint_qualifying": [],
+      "sprint": [],
+      "qualifying": [],
+      "practice": {
+        "fp1_best": "Data unavailable from Ergast endpoint",
+        "fp2_best": "Data unavailable from Ergast endpoint",
+        "fp3_best": "Data unavailable from Ergast endpoint"
+      },
+      "summary": {
+        "round": 24,
+        "race_name": "Abu Dhabi Grand Prix",
+        "date": "2026-12-06",
+        "circuit": "Yas Marina Circuit",
+        "country": "UAE",
+        "winner": null,
+        "winner_team": null,
+        "pole": null,
+        "pole_time": null,
+        "fastest_lap_driver": null,
+        "fastest_lap_time": null,
+        "had_sprint": false
+      }
+    }
+  ]
+}

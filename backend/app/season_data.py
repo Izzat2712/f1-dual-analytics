@@ -9,7 +9,7 @@ from urllib.request import urlopen
 
 BASE = "https://api.jolpi.ca/ergast/f1"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-SUPPORTED_SEASONS = list(range(2021, 2026))
+SUPPORTED_SEASONS = list(range(2021, 2027))
 _LAST_FETCH_TS = 0.0
 
 
@@ -45,11 +45,19 @@ def map_driver(driver: dict) -> str:
     return f"{driver['givenName']} {driver['familyName']}"
 
 
+def normalize_constructor_name(season: int, constructor_name: str | None) -> str | None:
+    if not constructor_name:
+        return constructor_name
+    if season >= 2026 and constructor_name in {"Sauber", "Kick Sauber"}:
+        return "Audi"
+    return constructor_name
+
+
 def season_file(season: int) -> Path:
     return DATA_DIR / f"season_{season}.json"
 
 
-def extract_round_summary(race: dict, quali: dict | None, sprint: dict | None) -> dict:
+def extract_round_summary(season: int, race: dict, quali: dict | None, sprint: dict | None) -> dict:
     race_results = race.get("Results", [])
     race_winner = race_results[0] if race_results else {}
     fastest_lap = None
@@ -68,7 +76,7 @@ def extract_round_summary(race: dict, quali: dict | None, sprint: dict | None) -
         "circuit": race.get("Circuit", {}).get("circuitName"),
         "country": race.get("Circuit", {}).get("Location", {}).get("country"),
         "winner": map_driver(race_winner.get("Driver", {})) if race_winner else None,
-        "winner_team": race_winner.get("Constructor", {}).get("name"),
+        "winner_team": normalize_constructor_name(season, race_winner.get("Constructor", {}).get("name")),
         "pole": map_driver(quali_results[0]["Driver"]) if quali_results else None,
         "pole_time": quali_results[0].get("Q3") if quali_results else None,
         "fastest_lap_driver": map_driver(fastest_lap.get("Driver", {})) if fastest_lap else None,
@@ -80,6 +88,9 @@ def extract_round_summary(race: dict, quali: dict | None, sprint: dict | None) -
 def validate_dataset(data: dict) -> None:
     standings = {row["driver"]: float(row["points"]) for row in data.get("driver_standings", [])}
     points_progression = data.get("points_progression", [])
+    # Pre-season snapshots can exist with only schedule data and no standings yet.
+    if not standings:
+        return
     if not points_progression:
         raise RuntimeError("Season dataset has no points progression.")
 
@@ -127,14 +138,16 @@ def build_season_dataset(season: int) -> dict:
 
     final_driver_lists = driver_standings_raw["MRData"]["StandingsTable"]["StandingsLists"]
     final_constructor_lists = constructor_standings_raw["MRData"]["StandingsTable"]["StandingsLists"]
-    if not final_driver_lists or not final_constructor_lists:
-        raise RuntimeError(f"No standings found for season {season}")
 
-    final_driver_standings = final_driver_lists[-1]["DriverStandings"]
-    final_constructor_standings = final_constructor_lists[-1]["ConstructorStandings"]
+    final_driver_standings = final_driver_lists[-1]["DriverStandings"] if final_driver_lists else []
+    final_constructor_standings = (
+        final_constructor_lists[-1]["ConstructorStandings"] if final_constructor_lists else []
+    )
 
     progression_drivers = [map_driver(item["Driver"]) for item in final_driver_standings]
-    progression_constructors = [item["Constructor"]["name"] for item in final_constructor_standings]
+    progression_constructors = [
+        normalize_constructor_name(season, item["Constructor"]["name"]) for item in final_constructor_standings
+    ]
 
     rounds: list[dict] = []
     points_progression: list[dict] = []
@@ -159,13 +172,13 @@ def build_season_dataset(season: int) -> dict:
             sprint_races = sprint_details["MRData"]["RaceTable"]["Races"]
             sprint_payload = sprint_races[0] if sprint_races else None
 
-        round_summary = extract_round_summary(race_payload, quali_payload, sprint_payload)
+        round_summary = extract_round_summary(season, race_payload, quali_payload, sprint_payload)
 
         results = []
         for res in race_payload.get("Results", []):
             time_value = res.get("Time", {}).get("time") or f"+{res.get('Time', {}).get('millis', '-')}"
             driver_name = map_driver(res["Driver"])
-            constructor_name = res["Constructor"]["name"]
+            constructor_name = normalize_constructor_name(season, res["Constructor"]["name"])
             race_points = float(res["points"])
             results.append(
                 {
@@ -202,7 +215,7 @@ def build_season_dataset(season: int) -> dict:
             sprint_rows = sprint_payload.get("SprintResults", [])
             for s in sprint_rows:
                 driver_name = map_driver(s["Driver"])
-                constructor_name = s["Constructor"]["name"]
+                constructor_name = normalize_constructor_name(season, s["Constructor"]["name"])
                 sprint_points = float(s["points"])
                 sprint.append(
                     {
@@ -224,7 +237,7 @@ def build_season_dataset(season: int) -> dict:
                     {
                         "position": int(s.get("grid", 0)),
                         "driver": map_driver(s["Driver"]),
-                        "team": s["Constructor"]["name"],
+                        "team": normalize_constructor_name(season, s["Constructor"]["name"]),
                         "sq1": None,
                         "sq2": None,
                         "sq3": None,
@@ -276,14 +289,14 @@ def build_season_dataset(season: int) -> dict:
                 "driver": map_driver(item["Driver"]),
                 "points": float(item["points"]),
                 "wins": int(item["wins"]),
-                "team": item["Constructors"][0]["name"],
+                "team": normalize_constructor_name(season, item["Constructors"][0]["name"]),
             }
             for item in final_driver_standings
         ],
         "constructor_standings": [
             {
                 "position": int(item["position"]),
-                "team": item["Constructor"]["name"],
+                "team": normalize_constructor_name(season, item["Constructor"]["name"]),
                 "points": float(item["points"]),
                 "wins": int(item["wins"]),
             }
