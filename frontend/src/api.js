@@ -67,5 +67,15 @@ export async function simulateNetwork(payload) {
 
 export async function getEngineeringPositions(roundNo, season) {
   const res = await fetch(`${API_BASE}/api/engineering/positions/${roundNo}?season=${season}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.detail ? `: ${body.detail}` : "";
+    } catch {
+      // Ignore body parse failures; keep generic message.
+    }
+    throw new Error(`Failed to load positions (${res.status})${detail}`);
+  }
   return res.json();
 }
