@@ -290,6 +290,7 @@ function ConstructorProgressionTooltip({ active, label, payload }) {
 }
 
 function CasualPanel({ overview, race, roundsSummary, roundNo }) {
+  const noDataText = "No data yet for this season/round.";
   const progressionDrivers = overview?.progression_drivers || [];
   const progressionConstructors = overview?.progression_constructors || [];
   const isSprintWeekend = (race?.sprint_qualifying?.length || 0) > 0;
@@ -312,16 +313,18 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
               <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Wins</th><th>Pts</th></tr>
             </thead>
             <tbody>
-              {overview?.driver_standings?.map((d) => (
-                <tr key={d.position}>
-                  <td>{d.position}</td>
-                  <td className="avatar-cell"><DriverAvatar driverName={d.driver} season={overview?.season || 2025} roundNo={roundNo} /></td>
-                  <td>{d.driver}</td>
-                  <td>{d.team}</td>
-                  <td>{d.wins}</td>
-                  <td>{d.points}</td>
-                </tr>
-              ))}
+              {overview?.driver_standings?.length
+                ? overview.driver_standings.map((d) => (
+                  <tr key={d.position}>
+                    <td>{d.position}</td>
+                    <td className="avatar-cell"><DriverAvatar driverName={d.driver} season={overview?.season || 2025} roundNo={roundNo} /></td>
+                    <td>{d.driver}</td>
+                    <td>{d.team}</td>
+                    <td>{d.wins}</td>
+                    <td>{d.points}</td>
+                  </tr>
+                ))
+                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -335,16 +338,18 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
             <tr><th>Pos</th><th></th><th>Team</th><th>Pts</th></tr>
           </thead>
           <tbody>
-            {overview?.constructor_standings?.map((c) => (
-              <tr key={c.position}>
-                <td>{c.position}</td>
-                <td className="logo-cell">
-                  <TeamLogo teamName={c.team} season={overview?.season || 2025} roundNo={roundNo} />
-                </td>
-                <td>{c.team}</td>
-                <td>{c.points}</td>
-              </tr>
-            ))}
+            {overview?.constructor_standings?.length
+              ? overview.constructor_standings.map((c) => (
+                <tr key={c.position}>
+                  <td>{c.position}</td>
+                  <td className="logo-cell">
+                    <TeamLogo teamName={c.team} season={overview?.season || 2025} roundNo={roundNo} />
+                  </td>
+                  <td>{c.team}</td>
+                  <td>{c.points}</td>
+                </tr>
+              ))
+              : <tr><td colSpan={4} className="small">{noDataText}</td></tr>}
           </tbody>
           </table>
         </div>
@@ -358,14 +363,16 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
               <table>
                 <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Team</th></tr></thead>
                 <tbody>
-                  {race?.sprint_qualifying?.map((sq) => (
-                    <tr key={`${sq.position}-${sq.driver}`}>
-                      <td>{sq.position}</td>
-                      <td className="avatar-cell"><DriverAvatar driverName={sq.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                      <td>{sq.driver}</td>
-                      <td>{sq.team}</td>
-                    </tr>
-                  ))}
+                  {race?.sprint_qualifying?.length
+                    ? race.sprint_qualifying.map((sq) => (
+                      <tr key={`${sq.position}-${sq.driver}`}>
+                        <td>{sq.position}</td>
+                        <td className="avatar-cell"><DriverAvatar driverName={sq.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                        <td>{sq.driver}</td>
+                        <td>{sq.team}</td>
+                      </tr>
+                    ))
+                    : <tr><td colSpan={4} className="small">{noDataText}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -376,16 +383,18 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
           <table>
             <thead><tr><th>Pos</th><th></th><th>Driver</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead>
             <tbody>
-              {race?.qualifying?.map((q) => (
-                <tr key={q.position}>
-                  <td>{q.position}</td>
-                  <td className="avatar-cell"><DriverAvatar driverName={q.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                  <td>{q.driver}</td>
-                  <td>{q.q1 || "-"}</td>
-                  <td>{q.q2 || "-"}</td>
-                  <td>{q.q3 || "-"}</td>
-                </tr>
-              ))}
+              {race?.qualifying?.length
+                ? race.qualifying.map((q) => (
+                  <tr key={q.position}>
+                    <td>{q.position}</td>
+                    <td className="avatar-cell"><DriverAvatar driverName={q.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                    <td>{q.driver}</td>
+                    <td>{q.q1 || "-"}</td>
+                    <td>{q.q2 || "-"}</td>
+                    <td>{q.q3 || "-"}</td>
+                  </tr>
+                ))
+                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -401,16 +410,18 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                   <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
                 </thead>
                 <tbody>
-                  {race?.sprint?.map((s) => (
-                    <tr key={`${s.position}-${s.driver}`}>
-                      <td>{s.position}</td>
-                      <td className="avatar-cell"><DriverAvatar driverName={s.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                      <td>{s.driver}</td>
-                      <td>{s.team}</td>
-                      <td>{s.time || "-"}</td>
-                      <td>{s.points}</td>
-                    </tr>
-                  ))}
+                  {race?.sprint?.length
+                    ? race.sprint.map((s) => (
+                      <tr key={`${s.position}-${s.driver}`}>
+                        <td>{s.position}</td>
+                        <td className="avatar-cell"><DriverAvatar driverName={s.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                        <td>{s.driver}</td>
+                        <td>{s.team}</td>
+                        <td>{s.time || "-"}</td>
+                        <td>{s.points}</td>
+                      </tr>
+                    ))
+                    : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -424,16 +435,18 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
               <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Time</th><th>Pts</th></tr>
             </thead>
             <tbody>
-              {race?.results?.map((r) => (
-                <tr key={r.position}>
-                  <td>{r.position}</td>
-                  <td className="avatar-cell"><DriverAvatar driverName={r.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
-                  <td>{r.driver}</td>
-                  <td>{r.team}</td>
-                  <td>{r.time}</td>
-                  <td>{r.points}</td>
-                </tr>
-              ))}
+              {race?.results?.length
+                ? race.results.map((r) => (
+                  <tr key={r.position}>
+                    <td>{r.position}</td>
+                    <td className="avatar-cell"><DriverAvatar driverName={r.driver} season={race?.season || overview?.season || 2025} roundNo={roundNo} /></td>
+                    <td>{r.driver}</td>
+                    <td>{r.team}</td>
+                    <td>{r.time}</td>
+                    <td>{r.points}</td>
+                  </tr>
+                ))
+                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -494,16 +507,18 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
               <tr><th>Rnd</th><th>Race</th><th>Winner</th><th>Pole</th><th>Fastest Lap</th><th>Sprint</th></tr>
             </thead>
             <tbody>
-              {(roundsSummary || []).map((r) => (
-                <tr key={r.round}>
-                  <td>{r.round}</td>
-                  <td>{r.race_name}</td>
-                  <td>{r.winner || "-"}</td>
-                  <td>{r.pole || "-"}</td>
-                  <td>{r.fastest_lap_driver || "-"}</td>
-                  <td>{r.had_sprint ? "Yes" : "No"}</td>
-                </tr>
-              ))}
+              {(roundsSummary || []).length
+                ? roundsSummary.map((r) => (
+                  <tr key={r.round}>
+                    <td>{r.round}</td>
+                    <td>{r.race_name}</td>
+                    <td>{r.winner || "-"}</td>
+                    <td>{r.pole || "-"}</td>
+                    <td>{r.fastest_lap_driver || "-"}</td>
+                    <td>{r.had_sprint ? "Yes" : "No"}</td>
+                  </tr>
+                ))
+                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
             </tbody>
           </table>
         </div>

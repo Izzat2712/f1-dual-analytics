@@ -9,7 +9,7 @@ This project delivers two experiences in a single Formula 1 analytics platform:
 - `Casual Mode`: standings, round results, qualifying, sprint weekends, and progression charts.
 - `Engineering Nerd Mode`: telemetry analytics, lap prediction, strategy what-if simulation, network delay modeling, and race engineer guidance.
 
-It supports season switching for `2021-2025` with dynamic round selection and locally cached datasets/assets.
+It supports season switching for `2021-2026` with dynamic round selection and locally cached datasets/assets.
 
 ## Core Features
 
@@ -127,7 +127,7 @@ Then redeploy frontend.
 ### Build/refresh season dataset
 
 ```powershell
-py -3 backend/scripts/build_season_dataset.py --start 2021 --end 2025 --force-refresh
+py -3 backend/scripts/build_season_dataset.py --start 2021 --end 2026 --force-refresh
 ```
 
 ### Refresh local driver/team assets
@@ -161,6 +161,6 @@ The app resolves assets in this order:
 
 ## Notes
 
-- Supported seasons: `2021-2025`
+- Supported seasons: `2021-2026`
 - Sprint qualifying list is derived from sprint starting grid due to source API limitations.
 - Driver standings team is aligned to each driver's latest team appearance in that season.
