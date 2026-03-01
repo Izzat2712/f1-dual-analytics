@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import random
+import time
 from typing import Literal
 
 import numpy as np
@@ -122,9 +123,61 @@ def get_season_data(season: int) -> dict:
     return SEASON_CACHE[season]
 
 
+def parse_warm_seasons() -> list[int]:
+    raw = os.getenv("WARM_SEASONS", "2025")
+    values: list[int] = []
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            season = int(token)
+        except ValueError:
+            continue
+        if season in SUPPORTED_SEASONS:
+            values.append(season)
+    return list(dict.fromkeys(values))
+
+
+@app.on_event("startup")
+def preload_warm_seasons() -> None:
+    for season in parse_warm_seasons():
+        try:
+            get_season_data(season)
+        except Exception:
+            # Keep startup resilient even if one warm season fails.
+            pass
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/warmup")
+def warmup(seasons: str | None = Query(None)) -> dict:
+    season_values: list[int] = []
+    raw = seasons if seasons is not None else os.getenv("WARM_SEASONS", "2025")
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        try:
+            season = int(token)
+        except ValueError:
+            continue
+        if season in SUPPORTED_SEASONS:
+            season_values.append(season)
+    season_values = list(dict.fromkeys(season_values))
+
+    warmed: list[dict[str, float | int]] = []
+    for season in season_values:
+        start = time.perf_counter()
+        get_season_data(season)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        warmed.append({"season": season, "elapsed_ms": round(elapsed_ms, 2)})
+
+    return {"status": "ok", "warmed": warmed, "cached_seasons": sorted(SEASON_CACHE.keys())}
 
 
 @app.get("/api/casual/seasons")
