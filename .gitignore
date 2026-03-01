@@ -13,3 +13,7 @@ Thumbs.db
 .vscode/
 
 .vercel
+
+# Local scratch/debug artifacts
+.tmp*
+tmp_*
