@@ -94,6 +94,20 @@ body::after {
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42);
 }
 
+.hero-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.hero-left {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .hero::before,
 .hero::after {
   content: "";
@@ -121,8 +135,6 @@ body::after {
 
 h1 {
   margin: 0;
-  position: relative;
-  z-index: 1;
   font-family: "Barlow Condensed", "Rajdhani", sans-serif;
   font-size: clamp(1.75rem, 2.9vw, 3rem);
   font-weight: 700;
@@ -141,6 +153,66 @@ h1 {
   color: #aabbd7;
   position: relative;
   z-index: 1;
+}
+
+.countdown-card {
+  flex: 0 0 330px;
+  width: 330px;
+  min-height: 152px;
+  margin-top: 0.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(145deg, rgba(12, 16, 26, 0.94), rgba(23, 32, 47, 0.92));
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.4);
+  padding: 0.86rem 0.9rem;
+  backdrop-filter: blur(8px);
+}
+
+.countdown-race {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  color: #d6e2fa;
+  font-weight: 700;
+}
+
+.countdown-flag {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.countdown-flag-img {
+  width: 20px;
+  height: 14px;
+  border-radius: 2px;
+  object-fit: cover;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.countdown-session {
+  margin-top: 0.22rem;
+  font-family: "Barlow Condensed", "Rajdhani", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 0.05em;
+}
+
+.countdown-time {
+  margin-top: 0.44rem;
+  font-size: 2.05rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.countdown-local-start {
+  margin-top: 0.48rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  color: #c7d5ef;
 }
 
 .track-ribbon {
@@ -186,6 +258,60 @@ h1 {
   align-items: center;
   position: relative;
   z-index: 1;
+}
+
+.hero-note-row {
+  margin-top: 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.hero-warning-note {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  border-radius: 9px;
+  background: rgba(120, 53, 15, 0.32);
+  color: #fde68a;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.34rem 0.5rem;
+}
+
+.hero-social-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.hero-social-link {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  background: rgba(11, 16, 25, 0.8);
+  color: #e6eefc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hero-social-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+}
+
+.hero-social-link svg {
+  width: 18px;
+  height: 18px;
 }
 
 button,
@@ -599,6 +725,94 @@ thead th {
   flex-wrap: wrap;
 }
 
+.telemetry-grid {
+  align-items: stretch;
+}
+
+.grid > .telemetry-card {
+  grid-column: span 4;
+  min-height: 360px;
+}
+
+.telemetry-card-controls {
+  margin-bottom: 0.25rem;
+}
+
+.telemetry-warning {
+  margin-top: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  border-radius: 9px;
+  background: rgba(120, 53, 15, 0.32);
+  color: #fde68a;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.34rem 0.5rem;
+}
+
+.telemetry-chart-wrap {
+  position: relative;
+}
+
+.telemetry-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 11, 18, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  backdrop-filter: blur(2px);
+  z-index: 2;
+}
+
+.telemetry-loading-overlay span {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #e8f0ff;
+  letter-spacing: 0.02em;
+}
+
+.telemetry-source-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  text-transform: uppercase;
+}
+
+.telemetry-source-pill.source-openf1 {
+  background: rgba(34, 197, 94, 0.2);
+  color: #9df2b8;
+}
+
+.telemetry-source-pill.source-synthetic {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd58a;
+}
+
+.telemetry-source-pill.source-na {
+  background: rgba(100, 116, 139, 0.25);
+  color: #d1d9e6;
+}
+
+.grid > .telemetry-card.telemetry-card-center-left {
+  grid-column: 3 / span 4;
+}
+
+.grid > .telemetry-card.telemetry-card-center-right {
+  grid-column: 7 / span 4;
+}
+
 .positions-head {
   display: flex;
   justify-content: space-between;
@@ -675,6 +889,174 @@ thead th {
   font-size: 0.95rem;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.67rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.status-finished {
+  background: rgba(34, 197, 94, 0.22);
+  color: #8bf0ad;
+}
+
+.status-retired {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fdba74;
+}
+
+.status-dns {
+  background: rgba(100, 116, 139, 0.26);
+  color: #cbd5e1;
+}
+
+.status-disqualification {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.tyre-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  font-size: 0.75rem;
+}
+
+.tyre-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.26rem;
+}
+
+.tyre-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.tyre-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tyre-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.tyre-driver-label {
+  font-size: 0.77rem;
+  color: #aeb9d2;
+  font-weight: 700;
+}
+
+.tyre-row-track {
+  display: flex;
+  align-items: stretch;
+  min-height: 24px;
+  background: rgba(10, 18, 30, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tyre-stint-segment {
+  position: relative;
+  border: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.72);
+  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  padding: 0;
+  margin: 0;
+  min-width: 8px;
+  color: rgba(3, 7, 15, 0.85);
+  font-size: 0.64rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 140ms ease, box-shadow 140ms ease;
+}
+
+.tyre-stint-segment span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.tyre-stint-segment:hover {
+  filter: brightness(1.08);
+}
+
+.tyre-stint-segment.active {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.tyre-stint-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  background: rgba(5, 9, 18, 0.96);
+  color: #ecf2ff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 7px;
+  padding: 0.22rem 0.38rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  z-index: 16;
+  pointer-events: none;
+}
+
+.tyre-stint-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(2, 6, 14, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.tyre-stint-popup-card {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(13, 23, 42, 0.97), rgba(20, 18, 42, 0.95));
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+  padding: 0.9rem 0.9rem 0.8rem;
+  position: relative;
+}
+
+.tyre-stint-popup-close {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.46rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.tyre-stint-detail .small {
+  margin: 0.22rem 0;
+}
+
 .position-tooltip {
   background: #060a12;
   border: 1px solid rgba(255, 255, 255, 0.26);
@@ -696,6 +1078,91 @@ thead th {
   flex-direction: column;
   gap: 0.16rem;
   font-size: 0.78rem;
+}
+
+.h2h-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.h2h-chart-wrap {
+  width: 100%;
+  min-height: 340px;
+}
+
+.h2h-lap-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.h2h-lap-picker button {
+  padding: 0.22rem 0.48rem;
+  font-size: 0.72rem;
+  border-radius: 8px;
+}
+
+.h2h-selected-lap-top {
+  width: min(560px, 100%);
+  margin-left: 0;
+  margin-right: auto;
+  padding: 0.68rem;
+}
+
+.h2h-selected-lap-top h3 {
+  margin-bottom: 0.35rem;
+}
+
+.h2h-selected-lap-top .small {
+  margin: 0.15rem 0;
+}
+
+.h2h-selected-lap {
+  padding: 0.68rem;
+}
+
+.h2h-selected-lap h3 {
+  margin-bottom: 0.35rem;
+}
+
+.h2h-selected-lap .small {
+  margin: 0.15rem 0;
+}
+
+.h2h-pace-grid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.h2h-track-controls {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.h2h-track-layout {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.h2h-sector-segment {
+  border-radius: 12px;
+  min-height: 54px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+}
+
+.h2h-sector-segment.active {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
+.h2h-sector-detail .small {
+  margin: 0.24rem 0;
 }
 
 .session-card-head {
@@ -896,6 +1363,15 @@ thead th {
     grid-column: span 6;
   }
 
+  .grid > .telemetry-card {
+    grid-column: span 6;
+  }
+
+  .grid > .telemetry-card.telemetry-card-center-left,
+  .grid > .telemetry-card.telemetry-card-center-right {
+    grid-column: span 6;
+  }
+
   .top-card,
   .constructor-card {
     min-height: 382px;
@@ -916,6 +1392,21 @@ thead th {
     padding: 0.95rem 0.85rem;
   }
 
+  .hero-main {
+    flex-direction: column;
+  }
+
+  .hero-note-row {
+    align-items: flex-start;
+  }
+
+  .countdown-card {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0.7rem 0.78rem;
+  }
+
   h1 {
     line-height: 1.04;
   }
@@ -925,6 +1416,15 @@ thead th {
   }
 
   .grid > .card {
+    grid-column: 1 / -1;
+  }
+
+  .grid > .telemetry-card {
+    grid-column: 1 / -1;
+  }
+
+  .grid > .telemetry-card.telemetry-card-center-left,
+  .grid > .telemetry-card.telemetry-card-center-right {
     grid-column: 1 / -1;
   }
 
@@ -955,5 +1455,15 @@ thead th {
   .session-card-head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .tyre-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+
+  .h2h-pace-grid,
+  .h2h-track-controls {
+    grid-template-columns: 1fr;
   }
 }
