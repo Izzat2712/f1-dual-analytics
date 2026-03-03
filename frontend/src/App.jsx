@@ -972,7 +972,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   );
 }
 
-function EngineeringPanel({ roundNo, race }) {
+function EngineeringPanel({ roundNo, season, race }) {
   const [engineeringTab, setEngineeringTab] = useState("positions");
   const [positionsViewTab, setPositionsViewTab] = useState("lap_by_lap");
   const [positionsSession, setPositionsSession] = useState("race");
@@ -1064,33 +1064,58 @@ function EngineeringPanel({ roundNo, race }) {
   }, [drivers, driver]);
 
   useEffect(() => {
-    if (drivers.length < 2) {
-      setH2hDriverA(drivers[0] || "");
+    if (!drivers.length) {
+      setH2hDriverA("");
       setH2hDriverB("");
       return;
     }
-    if (!h2hDriverA || !drivers.includes(h2hDriverA)) {
-      setH2hDriverA(drivers[0]);
-      return;
+    if (h2hDriverA && !drivers.includes(h2hDriverA)) {
+      setH2hDriverA("");
     }
-    if (!h2hDriverB || !drivers.includes(h2hDriverB) || h2hDriverB === h2hDriverA) {
-      const fallback = drivers.find((name) => name !== h2hDriverA) || drivers[1] || "";
-      setH2hDriverB(fallback);
+    if (h2hDriverB && !drivers.includes(h2hDriverB)) {
+      setH2hDriverB("");
+    }
+    if (h2hDriverA && h2hDriverB && h2hDriverA === h2hDriverB) {
+      setH2hDriverB("");
     }
   }, [drivers, h2hDriverA, h2hDriverB]);
 
   useEffect(() => {
     if (!driver || !roundNo) return;
-    getEngineeringDriverAnalysis({ season: race?.season || 2025, round_no: roundNo, driver }).then(setAnalysis);
-  }, [roundNo, driver, race]);
+    let cancelled = false;
+    getEngineeringDriverAnalysis({ season, round_no: roundNo, driver })
+      .then((payload) => {
+        if (cancelled) return;
+        setAnalysis(payload);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAnalysis(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [roundNo, season, driver]);
 
   useEffect(() => {
     if (!teammate || !roundNo) {
       setTeammateAnalysis(null);
       return;
     }
-    getEngineeringDriverAnalysis({ season: race?.season || 2025, round_no: roundNo, driver: teammate }).then(setTeammateAnalysis);
-  }, [roundNo, teammate, race]);
+    let cancelled = false;
+    getEngineeringDriverAnalysis({ season, round_no: roundNo, driver: teammate })
+      .then((payload) => {
+        if (cancelled) return;
+        setTeammateAnalysis(payload);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTeammateAnalysis(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [roundNo, season, teammate]);
 
   useEffect(() => {
     simulateNetwork(networkInput).then(setNetworkWhatIf);
@@ -1102,7 +1127,6 @@ function EngineeringPanel({ roundNo, race }) {
 
   useEffect(() => {
     if (!roundNo) return;
-    const season = race?.season || 2025;
     setPositionsLoading(true);
     setPositionsError("");
     getEngineeringPositions(roundNo, season, positionsSession)
@@ -1116,11 +1140,10 @@ function EngineeringPanel({ roundNo, race }) {
         setPositionsData(null);
       })
       .finally(() => setPositionsLoading(false));
-  }, [roundNo, race?.season, positionsSession]);
+  }, [roundNo, season, positionsSession]);
 
   useEffect(() => {
     if (!roundNo) return;
-    const season = race?.season || 2025;
     setTyreStrategyLoading(true);
     setTyreStrategyError("");
     setHoveredTyreStint(null);
@@ -1134,17 +1157,26 @@ function EngineeringPanel({ roundNo, race }) {
         setTyreStrategyData(null);
       })
       .finally(() => setTyreStrategyLoading(false));
-  }, [roundNo, race?.season, tyreStrategySession]);
+  }, [roundNo, season, tyreStrategySession]);
 
   useEffect(() => {
     setTyreStrategySession("race");
-  }, [roundNo, race?.season]);
+  }, [roundNo, season]);
 
   useEffect(() => {
     if (!roundNo || !h2hDriverA || !h2hDriverB || h2hDriverA === h2hDriverB) {
+      setH2hData(null);
+      setSelectedH2HLap(null);
+      setTrackLapSelectionA("fastest");
+      setTrackLapSelectionB("fastest");
+      setSelectedSectorIndex(1);
+      if (h2hDriverA && h2hDriverB && h2hDriverA === h2hDriverB) {
+        setH2hError("Please select two different drivers.");
+      } else {
+        setH2hError("");
+      }
       return;
     }
-    const season = race?.season || 2025;
     setH2hLoading(true);
     setH2hError("");
     getEngineeringH2H(roundNo, season, h2hDriverA, h2hDriverB, h2hSession)
@@ -1161,27 +1193,37 @@ function EngineeringPanel({ roundNo, race }) {
         setH2hError(error?.message || "Unable to load H2H comparison.");
       })
       .finally(() => setH2hLoading(false));
-  }, [roundNo, race?.season, h2hDriverA, h2hDriverB, h2hSession]);
+  }, [roundNo, season, h2hDriverA, h2hDriverB, h2hSession]);
 
   useEffect(() => {
     setH2hTab("lap_times");
-  }, [roundNo, race?.season]);
+  }, [roundNo, season]);
 
   useEffect(() => {
     setH2hSession("race");
-  }, [roundNo, race?.season]);
+  }, [roundNo, season]);
+
+  useEffect(() => {
+    setH2hDriverA("");
+    setH2hDriverB("");
+    setH2hData(null);
+    setH2hError("");
+    setSelectedH2HLap(null);
+    setTrackLapSelectionA("fastest");
+    setTrackLapSelectionB("fastest");
+    setSelectedSectorIndex(1);
+  }, [roundNo, season]);
 
   useEffect(() => {
     setPositionsViewTab("lap_by_lap");
-  }, [roundNo, race?.season]);
+  }, [roundNo, season]);
 
   useEffect(() => {
     setPositionsSession("race");
-  }, [roundNo, race?.season]);
+  }, [roundNo, season]);
 
   useEffect(() => {
     if (!roundNo) return;
-    const season = race?.season || 2025;
     setTelemetryLoading(true);
     setTelemetryError("");
     getEngineeringTelemetryCatalog(roundNo, season, telemetrySession)
@@ -1193,7 +1235,7 @@ function EngineeringPanel({ roundNo, race }) {
         setTelemetryError(error?.message || "Unable to load telemetry catalog.");
       })
       .finally(() => setTelemetryLoading(false));
-  }, [roundNo, race?.season, telemetrySession]);
+  }, [roundNo, season, telemetrySession]);
 
   useEffect(() => {
     const drivers = (telemetryCatalog?.drivers || []).map((item) => item?.driver).filter(Boolean);
@@ -1216,7 +1258,6 @@ function EngineeringPanel({ roundNo, race }) {
   }, [telemetryCatalog]);
 
   useEffect(() => {
-    const season = race?.season || 2025;
     const selections = TELEMETRY_CARDS
       .map((card) => ({ cardKey: card.key, selection: telemetrySelections?.[card.key] }))
       .filter((item) => item.selection?.driver);
@@ -1305,14 +1346,14 @@ function EngineeringPanel({ roundNo, race }) {
     return () => {
       cancelled = true;
     };
-  }, [roundNo, race?.season, telemetrySession, telemetrySelections]);
+  }, [roundNo, season, telemetrySession, telemetrySelections]);
 
   useEffect(() => {
     setTelemetrySession("race");
     setTelemetryTraces({});
     setTelemetryCardLoading({});
     telemetryFetchSignatureRef.current = {};
-  }, [roundNo, race?.season]);
+  }, [roundNo, season]);
 
   const telemetryGraph = (analysis?.telemetry?.smoothed?.speed || []).map((s, i) => ({
     idx: i,
@@ -2018,6 +2059,7 @@ function EngineeringPanel({ roundNo, race }) {
           <div className="form-row" style={{ marginBottom: "0.5rem" }}>
             <span className="small">Driver A</span>
             <select value={h2hDriverA} onChange={(e) => setH2hDriverA(e.target.value)}>
+              <option value="">Select driver</option>
               {drivers.map((name) => <option key={`h2h-a-${name}`} value={name}>{name}</option>)}
             </select>
             {h2hTab === "track_dominance" ? (
@@ -2030,6 +2072,7 @@ function EngineeringPanel({ roundNo, race }) {
             ) : null}
             <span className="small">Driver B</span>
             <select value={h2hDriverB} onChange={(e) => setH2hDriverB(e.target.value)}>
+              <option value="">Select driver</option>
               {drivers.map((name) => <option key={`h2h-b-${name}`} value={name}>{name}</option>)}
             </select>
             {h2hTab === "lap_times" ? (
@@ -2062,6 +2105,7 @@ function EngineeringPanel({ roundNo, race }) {
 
           {h2hLoading ? <div className="small">Loading H2H...</div> : null}
           {h2hError ? <div className="small">{h2hError}</div> : null}
+          {!h2hDriverA || !h2hDriverB ? <div className="small">Please select Driver A and Driver B to load H2H data.</div> : null}
           {h2hData?.notes?.length ? <div className="small">{h2hData.notes.join(" ")}</div> : null}
 
           {!h2hLoading && !h2hError && h2hTab === "lap_times" ? (
@@ -2351,7 +2395,7 @@ function EngineeringPanel({ roundNo, race }) {
           <span className="small">Teammate: {teammate || "-"}</span>
         </div>
         <div className="driver-portrait-wrap">
-          {driver ? <DriverPortrait driverName={driver} season={race?.season || 2025} roundNo={roundNo} /> : null}
+          {driver ? <DriverPortrait driverName={driver} season={season} roundNo={roundNo} /> : null}
         </div>
       </div>
 
@@ -2571,17 +2615,32 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     getCasualOverview(season).then((data) => {
+      if (cancelled) return;
       setOverview(data);
       if (data?.rounds_count && data.rounds_count >= 1) {
         setRoundNo(1);
       }
     });
-    getRoundsSummary(season).then((payload) => setRoundsSummary(payload?.rounds || []));
+    getRoundsSummary(season).then((payload) => {
+      if (cancelled) return;
+      setRoundsSummary(payload?.rounds || []);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [season]);
 
   useEffect(() => {
-    getRoundResults(roundNo, season).then((payload) => setRace({ ...payload, season }));
+    let cancelled = false;
+    getRoundResults(roundNo, season).then((payload) => {
+      if (cancelled) return;
+      setRace({ ...payload, season });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [roundNo, season]);
 
   return (
@@ -2657,7 +2716,7 @@ export default function App() {
 
       {mode === "casual"
         ? <CasualPanel overview={overview} race={race} roundsSummary={roundsSummary} roundNo={roundNo} />
-        : <EngineeringPanel roundNo={roundNo} race={race} />}
+        : <EngineeringPanel roundNo={roundNo} season={season} race={race} />}
       <Analytics />
     </div>
   );
