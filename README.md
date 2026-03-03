@@ -5,7 +5,7 @@ Formula 1 analytics website with two user experiences in one product:
 - `Casual Mode` for fans
 - `Nerd Mode` for engineering-focused analysis
 
-Supports season and round navigation across `2021-2026`.
+Supports season and round navigation across `2023-2026`.
 
 ## Website Features
 

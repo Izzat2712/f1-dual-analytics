@@ -9,7 +9,9 @@ from urllib.request import urlopen
 
 BASE = "https://api.jolpi.ca/ergast/f1"
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-SUPPORTED_SEASONS = list(range(2021, 2027))
+# Keep older seasons available on disk, but hide inconsistent years from APIs for now.
+DISABLED_SEASONS = {2021, 2022}
+SUPPORTED_SEASONS = [season for season in range(2021, 2027) if season not in DISABLED_SEASONS]
 _LAST_FETCH_TS = 0.0
 
 
