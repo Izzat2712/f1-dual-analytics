@@ -627,6 +627,12 @@ table {
 .driver-card td:nth-child(5),
 .driver-card th:nth-child(6),
 .driver-card td:nth-child(6),
+.driver-card th:nth-child(7),
+.driver-card td:nth-child(7),
+.constructor-card th:nth-child(4),
+.constructor-card td:nth-child(4),
+.constructor-card th:nth-child(5),
+.constructor-card td:nth-child(5),
 .qualifying-stack-card th:nth-child(4),
 .qualifying-stack-card td:nth-child(4),
 .qualifying-stack-card th:nth-child(5),
@@ -634,6 +640,15 @@ table {
 .qualifying-stack-card th:nth-child(6),
 .qualifying-stack-card td:nth-child(6) {
   white-space: nowrap;
+}
+
+.driver-card th:nth-child(5),
+.driver-card td:nth-child(5),
+.driver-card th:nth-child(6),
+.driver-card td:nth-child(6),
+.constructor-card th:nth-child(4),
+.constructor-card td:nth-child(4) {
+  text-align: center;
 }
 
 th,

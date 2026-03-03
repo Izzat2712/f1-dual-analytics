@@ -677,7 +677,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
         <div className="table-scroll card-table-wrap">
           <table>
             <thead>
-              <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Wins</th><th>Pts</th></tr>
+              <tr><th>Pos</th><th></th><th>Driver</th><th>Team</th><th>Wins</th><th>Podiums</th><th>Pts</th></tr>
             </thead>
             <tbody>
               {overview?.driver_standings?.length
@@ -688,10 +688,11 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                     <td>{d.driver}</td>
                     <td>{d.team}</td>
                     <td>{d.wins}</td>
+                    <td>{d.podiums ?? 0}</td>
                     <td>{d.points}</td>
                   </tr>
                 ))
-                : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
+                : <tr><td colSpan={7} className="small">{noDataText}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -702,7 +703,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
         <div className="table-scroll card-table-wrap">
           <table>
           <thead>
-            <tr><th>Pos</th><th></th><th>Team</th><th>Pts</th></tr>
+            <tr><th>Pos</th><th></th><th>Team</th><th>Podiums</th><th>Pts</th></tr>
           </thead>
           <tbody>
             {overview?.constructor_standings?.length
@@ -713,10 +714,11 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                     <TeamLogo teamName={c.team} season={overview?.season || 2025} roundNo={roundNo} />
                   </td>
                   <td>{c.team}</td>
+                  <td>{c.podiums ?? 0}</td>
                   <td>{c.points}</td>
                 </tr>
               ))
-              : <tr><td colSpan={4} className="small">{noDataText}</td></tr>}
+              : <tr><td colSpan={5} className="small">{noDataText}</td></tr>}
           </tbody>
           </table>
         </div>

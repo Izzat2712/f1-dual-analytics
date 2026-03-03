@@ -48,9 +48,13 @@ def map_driver(driver: dict) -> str:
 def normalize_constructor_name(season: int, constructor_name: str | None) -> str | None:
     if not constructor_name:
         return constructor_name
+    normalized = str(constructor_name).strip()
+    lowered = normalized.lower()
     if season >= 2026 and constructor_name in {"Sauber", "Kick Sauber"}:
         return "Audi"
-    return constructor_name
+    if "cadillac" in lowered:
+        return "Cadillac"
+    return normalized
 
 
 def season_file(season: int) -> Path:
@@ -126,6 +130,47 @@ def align_driver_standings_teams(data: dict) -> bool:
         if mapped and row.get("team") != mapped:
             row["team"] = mapped
             changed = True
+    return changed
+
+
+def compute_podium_counts_from_rounds(data: dict) -> tuple[dict[str, int], dict[str, int]]:
+    driver_podiums: dict[str, int] = {}
+    constructor_podiums: dict[str, int] = {}
+    for round_payload in data.get("rounds", []):
+        for row in round_payload.get("results", []):
+            try:
+                position = int(row.get("position"))
+            except (TypeError, ValueError):
+                continue
+            if position < 1 or position > 3:
+                continue
+            driver = row.get("driver")
+            team = row.get("team")
+            if driver:
+                driver_podiums[driver] = driver_podiums.get(driver, 0) + 1
+            if team:
+                constructor_podiums[team] = constructor_podiums.get(team, 0) + 1
+    return driver_podiums, constructor_podiums
+
+
+def ensure_standings_podiums(data: dict) -> bool:
+    driver_podiums, constructor_podiums = compute_podium_counts_from_rounds(data)
+    changed = False
+
+    for row in data.get("driver_standings", []):
+        driver = row.get("driver")
+        podiums = int(driver_podiums.get(driver, 0))
+        if row.get("podiums") != podiums:
+            row["podiums"] = podiums
+            changed = True
+
+    for row in data.get("constructor_standings", []):
+        team = row.get("team")
+        podiums = int(constructor_podiums.get(team, 0))
+        if row.get("podiums") != podiums:
+            row["podiums"] = podiums
+            changed = True
+
     return changed
 
 
@@ -310,6 +355,7 @@ def build_season_dataset(season: int) -> dict:
         "rounds": rounds,
     }
     align_driver_standings_teams(data)
+    ensure_standings_podiums(data)
     validate_dataset(data)
     return data
 
@@ -322,6 +368,7 @@ def load_or_build_season(season: int, force_refresh: bool = False) -> dict:
     if target.exists() and not force_refresh:
         data = json.loads(target.read_text(encoding="utf-8"))
         changed = align_driver_standings_teams(data)
+        changed = ensure_standings_podiums(data) or changed
         validate_dataset(data)
         if changed:
             target.write_text(json.dumps(data, indent=2), encoding="utf-8")

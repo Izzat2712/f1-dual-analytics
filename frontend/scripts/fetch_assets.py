@@ -36,6 +36,49 @@ TEAM_URLS = {
     "Red Bull Racing": "redbullracing",
 }
 
+TEAM_DAM_SLUGS = {
+    "McLaren": "mclaren",
+    "Red Bull": "red-bull-racing",
+    "Ferrari": "ferrari",
+    "Mercedes": "mercedes",
+    "Aston Martin": "aston-martin",
+    "Williams": "williams",
+    "RB F1 Team": "rb",
+    "Racing Bulls": "rb",
+    "Haas F1 Team": "haas-f1-team",
+    "Haas": "haas-f1-team",
+    "Sauber": "kick-sauber",
+    "Kick Sauber": "kick-sauber",
+    "Audi": "audi",
+    "Alpine F1 Team": "alpine",
+    "Alpine": "alpine",
+    "Cadillac": "cadillac",
+    "Alfa Romeo": "alfa-romeo",
+    "AlphaTauri": "alphatauri",
+    "Red Bull Racing": "red-bull-racing",
+}
+
+SEASON_TEAM_MEDIA_OVERRIDES: dict[int, dict[str, str]] = {
+    2024: {
+        "Sauber": "kicksauber",
+        "Kick Sauber": "kicksauber",
+    },
+    2025: {
+        "Sauber": "kicksauber",
+        "Kick Sauber": "kicksauber",
+    },
+    2026: {
+        "Sauber": "audi",
+        "Kick Sauber": "audi",
+    },
+}
+
+SEASON_TEAM_DAM_OVERRIDES: dict[int, dict[str, str]] = {
+    2021: {
+        "Alfa Romeo": "alfa-romeo-racing",
+    },
+}
+
 SEASON_DRIVER_FALLBACK_YEARS = [2026, 2025, 2024, 2023, 2022, 2021]
 
 DEFAULT_TEAMS_BY_SEASON = {
@@ -113,31 +156,72 @@ def normalize_name(value: str) -> str:
     ).lower().strip()
 
 
-def fetch_bytes(url: str, attempts: int = 2) -> bytes | None:
+def fetch_bytes(url: str, attempts: int = 2, reject_cloudinary_missing: bool = False) -> bytes | None:
     for i in range(attempts):
         try:
             req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urlopen(req, timeout=10) as r:
+                if reject_cloudinary_missing:
+                    cld_error = r.headers.get("X-Cld-Error")
+                    if cld_error and "Resource not found" in cld_error:
+                        return None
                 return r.read()
         except (HTTPError, URLError):
             time.sleep(0.6 * (i + 1))
     return None
 
 
-def build_2026_team_logo_url(team_media_id: str) -> str:
+def build_team_car_url(season: int, team_media_id: str) -> str:
     return (
         "https://media.formula1.com/image/upload/"
         "f_png,c_lfill,w_512/"
-        "d_common:f1:2026:fallback:car:2026fallbackcarright.webp/"
-        f"v1740000000/common/f1/2026/{team_media_id}/2026{team_media_id}carright.webp"
+        f"d_common:f1:{season}:fallback:car:{season}fallbackcarright.webp/"
+        f"v1740000000/common/f1/{season}/{team_media_id}/{season}{team_media_id}carright.webp"
     )
 
 
 def team_media_id_for_season(team_name: str, season: int) -> str | None:
-    # For 2026 onward, treat Sauber naming as Audi branding.
-    if season >= 2026 and team_name in {"Sauber", "Kick Sauber"}:
-        return "audi"
+    season_overrides = SEASON_TEAM_MEDIA_OVERRIDES.get(season, {})
+    if team_name in season_overrides:
+        return season_overrides[team_name]
     return TEAM_URLS.get(team_name)
+
+
+def team_dam_slug_for_season(team_name: str, season: int) -> str | None:
+    season_overrides = SEASON_TEAM_DAM_OVERRIDES.get(season, {})
+    if team_name in season_overrides:
+        return season_overrides[team_name]
+    return TEAM_DAM_SLUGS.get(team_name)
+
+
+def build_team_dam_logo_url(season: int, dam_slug: str) -> str:
+    return (
+        "https://media.formula1.com/image/upload/"
+        f"f_auto,q_auto/content/dam/fom-website/teams/{season}/{dam_slug}.png"
+    )
+
+
+def team_logo_urls_for_season(team_name: str, season: int) -> list[str]:
+    urls: list[str] = []
+    team_media_id = team_media_id_for_season(team_name, season)
+    if team_media_id and season >= 2024:
+        urls.append(build_team_car_url(season, team_media_id))
+
+    dam_slug = team_dam_slug_for_season(team_name, season)
+    if dam_slug:
+        urls.append(build_team_dam_logo_url(season, dam_slug))
+
+    # Keep a safe fallback for legacy team names that may still resolve.
+    if season <= 2023 and team_name == "RB F1 Team":
+        urls.append(build_team_dam_logo_url(season, "alphatauri"))
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for url in urls:
+        if url not in seen:
+            deduped.append(url)
+            seen.add(url)
+    return deduped
 
 
 def read_drivers_and_teams() -> tuple[dict[int, set[str]], dict[int, set[str]], dict[int, set[int]]]:
@@ -268,14 +352,17 @@ def main() -> None:
         season_team_dir = TEAMS_DIR / str(season)
         season_team_dir.mkdir(parents=True, exist_ok=True)
         for team in sorted(season_teams):
-            team_media_id = team_media_id_for_season(team, season)
-            if not team_media_id:
+            urls = team_logo_urls_for_season(team, season)
+            if not urls:
                 continue
-            url = build_2026_team_logo_url(team_media_id)
             slug = slugify_team(team)
             target = TEAMS_DIR / f"{slug}.png"
             season_target = season_team_dir / f"{slug}.png"
-            data = fetch_bytes(url)
+            data = None
+            for url in urls:
+                data = fetch_bytes(url, reject_cloudinary_missing=True)
+                if data:
+                    break
             if data:
                 target.write_bytes(data)
                 season_target.write_bytes(data)

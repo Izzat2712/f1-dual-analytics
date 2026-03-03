@@ -241,7 +241,7 @@ def extract_round_session_schedule(race: dict) -> list[dict]:
 def get_round_session_schedule(season: int, round_no: int) -> list[dict]:
     key = (season, round_no)
     cached = ROUND_SESSION_SCHEDULE_CACHE.get(key)
-    if cached is not None:
+    if cached:
         return cached
 
     try:
@@ -252,13 +252,15 @@ def get_round_session_schedule(season: int, round_no: int) -> list[dict]:
     except Exception:
         schedule = []
 
-    ROUND_SESSION_SCHEDULE_CACHE[key] = schedule
+    # Avoid caching empty schedules from transient fetch failures.
+    if schedule:
+        ROUND_SESSION_SCHEDULE_CACHE[key] = schedule
     return schedule
 
 
 def get_season_session_schedule(season: int) -> list[dict]:
     cached = SEASON_SESSION_SCHEDULE_CACHE.get(season)
-    if cached is not None:
+    if cached:
         return cached
 
     try:
@@ -283,7 +285,9 @@ def get_season_session_schedule(season: int) -> list[dict]:
     except Exception:
         rounds = []
 
-    SEASON_SESSION_SCHEDULE_CACHE[season] = rounds
+    # Avoid caching empty schedules from transient fetch failures.
+    if rounds:
+        SEASON_SESSION_SCHEDULE_CACHE[season] = rounds
     return rounds
 
 

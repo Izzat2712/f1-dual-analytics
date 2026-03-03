@@ -7,147 +7,168 @@
       "driver": "Lando Norris",
       "points": 423.0,
       "wins": 7,
-      "team": "McLaren"
+      "team": "McLaren",
+      "podiums": 18
     },
     {
       "position": 2,
       "driver": "Max Verstappen",
       "points": 421.0,
       "wins": 8,
-      "team": "Red Bull"
+      "team": "Red Bull",
+      "podiums": 15
     },
     {
       "position": 3,
       "driver": "Oscar Piastri",
       "points": 410.0,
       "wins": 7,
-      "team": "McLaren"
+      "team": "McLaren",
+      "podiums": 16
     },
     {
       "position": 4,
       "driver": "George Russell",
       "points": 319.0,
       "wins": 2,
-      "team": "Mercedes"
+      "team": "Mercedes",
+      "podiums": 9
     },
     {
       "position": 5,
       "driver": "Charles Leclerc",
       "points": 242.0,
       "wins": 0,
-      "team": "Ferrari"
+      "team": "Ferrari",
+      "podiums": 7
     },
     {
       "position": 6,
       "driver": "Lewis Hamilton",
       "points": 156.0,
       "wins": 0,
-      "team": "Ferrari"
+      "team": "Ferrari",
+      "podiums": 0
     },
     {
       "position": 7,
       "driver": "Andrea Kimi Antonelli",
       "points": 150.0,
       "wins": 0,
-      "team": "Mercedes"
+      "team": "Mercedes",
+      "podiums": 3
     },
     {
       "position": 8,
       "driver": "Alexander Albon",
       "points": 73.0,
       "wins": 0,
-      "team": "Williams"
+      "team": "Williams",
+      "podiums": 0
     },
     {
       "position": 9,
       "driver": "Carlos Sainz",
       "points": 64.0,
       "wins": 0,
-      "team": "Williams"
+      "team": "Williams",
+      "podiums": 2
     },
     {
       "position": 10,
       "driver": "Fernando Alonso",
       "points": 56.0,
       "wins": 0,
-      "team": "Aston Martin"
+      "team": "Aston Martin",
+      "podiums": 0
     },
     {
       "position": 11,
       "driver": "Nico H\u00fclkenberg",
       "points": 51.0,
       "wins": 0,
-      "team": "Sauber"
+      "team": "Sauber",
+      "podiums": 1
     },
     {
       "position": 12,
       "driver": "Isack Hadjar",
       "points": 51.0,
       "wins": 0,
-      "team": "RB F1 Team"
+      "team": "RB F1 Team",
+      "podiums": 1
     },
     {
       "position": 13,
       "driver": "Oliver Bearman",
       "points": 41.0,
       "wins": 0,
-      "team": "Haas F1 Team"
+      "team": "Haas F1 Team",
+      "podiums": 0
     },
     {
       "position": 14,
       "driver": "Liam Lawson",
       "points": 38.0,
       "wins": 0,
-      "team": "RB F1 Team"
+      "team": "RB F1 Team",
+      "podiums": 0
     },
     {
       "position": 15,
       "driver": "Esteban Ocon",
       "points": 38.0,
       "wins": 0,
-      "team": "Haas F1 Team"
+      "team": "Haas F1 Team",
+      "podiums": 0
     },
     {
       "position": 16,
       "driver": "Lance Stroll",
       "points": 33.0,
       "wins": 0,
-      "team": "Aston Martin"
+      "team": "Aston Martin",
+      "podiums": 0
     },
     {
       "position": 17,
       "driver": "Yuki Tsunoda",
       "points": 33.0,
       "wins": 0,
-      "team": "Red Bull"
+      "team": "Red Bull",
+      "podiums": 0
     },
     {
       "position": 18,
       "driver": "Pierre Gasly",
       "points": 22.0,
       "wins": 0,
-      "team": "Alpine F1 Team"
+      "team": "Alpine F1 Team",
+      "podiums": 0
     },
     {
       "position": 19,
       "driver": "Gabriel Bortoleto",
       "points": 19.0,
       "wins": 0,
-      "team": "Sauber"
+      "team": "Sauber",
+      "podiums": 0
     },
     {
       "position": 20,
       "driver": "Franco Colapinto",
       "points": 0.0,
       "wins": 0,
-      "team": "Alpine F1 Team"
+      "team": "Alpine F1 Team",
+      "podiums": 0
     },
     {
       "position": 21,
       "driver": "Jack Doohan",
       "points": 0.0,
       "wins": 0,
-      "team": "Alpine F1 Team"
+      "team": "Alpine F1 Team",
+      "podiums": 0
     }
   ],
   "constructor_standings": [
@@ -155,61 +176,71 @@
       "position": 1,
       "team": "McLaren",
       "points": 833.0,
-      "wins": 14
+      "wins": 14,
+      "podiums": 34
     },
     {
       "position": 2,
       "team": "Mercedes",
       "points": 469.0,
-      "wins": 2
+      "wins": 2,
+      "podiums": 12
     },
     {
       "position": 3,
       "team": "Red Bull",
       "points": 451.0,
-      "wins": 8
+      "wins": 8,
+      "podiums": 15
     },
     {
       "position": 4,
       "team": "Ferrari",
       "points": 398.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 7
     },
     {
       "position": 5,
       "team": "Williams",
       "points": 137.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 2
     },
     {
       "position": 6,
       "team": "RB F1 Team",
       "points": 92.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 1
     },
     {
       "position": 7,
       "team": "Aston Martin",
       "points": 89.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 0
     },
     {
       "position": 8,
       "team": "Haas F1 Team",
       "points": 79.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 0
     },
     {
       "position": 9,
       "team": "Sauber",
       "points": 70.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 1
     },
     {
       "position": 10,
       "team": "Alpine F1 Team",
       "points": 22.0,
-      "wins": 0
+      "wins": 0,
+      "podiums": 0
     }
   ],
   "progression_drivers": [
