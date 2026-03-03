@@ -2197,7 +2197,7 @@ def casual_overview(season: int = Query(2025)) -> dict:
     return {
         "season": season_data["season"],
         "driver_standings": season_data["driver_standings"],
-        "constructor_standings": season_data["constructor_standings"][:10],
+        "constructor_standings": season_data["constructor_standings"],
         "points_progression": season_data["points_progression"],
         "progression_drivers": season_data["progression_drivers"],
         "constructor_points_progression": season_data["constructor_points_progression"],

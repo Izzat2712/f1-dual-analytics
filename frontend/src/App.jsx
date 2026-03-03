@@ -408,6 +408,11 @@ function formatLocalStart(ts) {
   }
 }
 
+function formatCountdownSessionLabel(label) {
+  const raw = String(label || "Session").trim();
+  return raw.replace(/^Practice(\s+\d+)?$/i, (_, num = "") => `Free Practice${num}`);
+}
+
 function NextSessionCountdown() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [scheduleRounds, setScheduleRounds] = useState([]);
@@ -506,7 +511,7 @@ function NextSessionCountdown() {
         {flagImg ? <img className="countdown-flag-img" src={flagImg} alt={`${targetRound?.country || "Country"} flag`} loading="lazy" /> : <span className="countdown-flag">{flag || "🏁"}</span>}
         <span>{raceName}</span>
       </div>
-      <div className="countdown-session">{String(nextSession.label || "Session").toUpperCase()}</div>
+      <div className="countdown-session">{formatCountdownSessionLabel(nextSession.label).toUpperCase()}</div>
       <div className="countdown-time">
         {parts.days}d {parts.hours}h {parts.minutes}m {parts.seconds}s
       </div>
