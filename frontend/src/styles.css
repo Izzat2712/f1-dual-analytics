@@ -28,6 +28,10 @@ body,
   min-height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   position: relative;
   margin: 0;
@@ -1363,6 +1367,10 @@ thead th {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   * {
     animation: none !important;
     transition: none !important;
