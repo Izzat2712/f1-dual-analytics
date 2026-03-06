@@ -1,12 +1,16 @@
 ﻿from __future__ import annotations
 
+import io
 import json
+import re
 import shutil
 import time
 import unicodedata
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_ROOT = ROOT.parents[0] / "backend" / "data"
@@ -97,9 +101,64 @@ DEFAULT_TEAMS_BY_SEASON = {
     }
 }
 
+DEFAULT_DRIVERS_BY_SEASON = {
+    2026: {
+        "Alexander Albon",
+        "Fernando Alonso",
+        "Kimi Antonelli",
+        "Oliver Bearman",
+        "Gabriel Bortoleto",
+        "Franco Colapinto",
+        "Pierre Gasly",
+        "Isack Hadjar",
+        "Lewis Hamilton",
+        "Nico Hulkenberg",
+        "Liam Lawson",
+        "Charles Leclerc",
+        "Arvid Lindblad",
+        "Lando Norris",
+        "Esteban Ocon",
+        "Sergio Perez",
+        "Oscar Piastri",
+        "George Russell",
+        "Carlos Sainz",
+        "Lance Stroll",
+        "Max Verstappen",
+        "Valtteri Bottas",
+    }
+}
+
+SEASON_DRIVER_PAGE_SLUGS: dict[int, dict[str, str]] = {
+    2026: {
+        "Alexander Albon": "alexander-albon",
+        "Fernando Alonso": "fernando-alonso",
+        "Kimi Antonelli": "kimi-antonelli",
+        "Oliver Bearman": "oliver-bearman",
+        "Gabriel Bortoleto": "gabriel-bortoleto",
+        "Franco Colapinto": "franco-colapinto",
+        "Pierre Gasly": "pierre-gasly",
+        "Isack Hadjar": "isack-hadjar",
+        "Lewis Hamilton": "lewis-hamilton",
+        "Nico Hulkenberg": "nico-hulkenberg",
+        "Liam Lawson": "liam-lawson",
+        "Charles Leclerc": "charles-leclerc",
+        "Arvid Lindblad": "arvid-lindblad",
+        "Lando Norris": "lando-norris",
+        "Esteban Ocon": "esteban-ocon",
+        "Sergio Perez": "sergio-perez",
+        "Oscar Piastri": "oscar-piastri",
+        "George Russell": "george-russell",
+        "Carlos Sainz": "carlos-sainz",
+        "Lance Stroll": "lance-stroll",
+        "Max Verstappen": "max-verstappen",
+        "Valtteri Bottas": "valtteri-bottas",
+    }
+}
+
 DRIVER_SLUGS = {
     "alexander albon": "albon",
     "andrea kimi antonelli": "antonelli",
+    "arvid lindblad": "lindblad",
     "antonio giovinazzi": "giovinazzi",
     "carlos sainz": "sainz",
     "charles leclerc": "leclerc",
@@ -113,6 +172,7 @@ DRIVER_SLUGS = {
     "isack hadjar": "hadjar",
     "jack doohan": "doohan",
     "kevin magnussen": "magnussen",
+    "kimi antonelli": "antonelli",
     "kimi raikkonen": "raikkonen",
     "lance stroll": "stroll",
     "lando norris": "norris",
@@ -138,6 +198,12 @@ DRIVER_SLUGS = {
 MANUAL_DRIVER_URLS = {
     "robert kubica": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Robert_Kubica_at_Monza_2023.jpg/330px-Robert_Kubica_at_Monza_2023.jpg",
 }
+
+DRIVER_PAGE_OG_IMAGE_RE = re.compile(r'<meta property="og:image" content="([^"]+)"')
+OG_IMAGE_THEME_RE = re.compile(r"/b_rgb:([0-9a-fA-F]{6})/")
+COMMON_2026_DRIVER_RE = re.compile(
+    r"/common/f1/2026/([^/]+)/([^/]+)/([^/]+right)\.(?:jpg|webp)$"
+)
 
 
 def slugify_team(name: str) -> str:
@@ -171,7 +237,145 @@ def fetch_bytes(url: str, attempts: int = 2, reject_cloudinary_missing: bool = F
     return None
 
 
+def fetch_text(url: str, attempts: int = 2) -> str | None:
+    for i in range(attempts):
+        try:
+            req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urlopen(req, timeout=10) as r:
+                return r.read().decode("utf-8", "ignore")
+        except (HTTPError, URLError):
+            time.sleep(0.6 * (i + 1))
+    return None
+
+
+def hex_to_rgb(value: str) -> tuple[int, int, int]:
+    cleaned = value.lstrip("#")
+    return tuple(int(cleaned[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def blend_rgb(
+    base: tuple[int, int, int],
+    other: tuple[int, int, int],
+    ratio: float,
+) -> tuple[int, int, int]:
+    return tuple(int(base[i] * (1.0 - ratio) + other[i] * ratio) for i in range(3))
+
+
+def build_driver_card_background(size: int, theme_rgb: tuple[int, int, int]) -> Image.Image:
+    dark_rgb = blend_rgb(theme_rgb, (8, 12, 20), 0.82)
+    light_rgb = blend_rgb(theme_rgb, (255, 255, 255), 0.18)
+    canvas = Image.new("RGBA", (size, size))
+    pixels = canvas.load()
+    for y in range(size):
+        t = y / max(size - 1, 1)
+        row_rgb = blend_rgb(dark_rgb, light_rgb, t * 0.85)
+        for x in range(size):
+            pixels[x, y] = (*row_rgb, 255)
+
+    glow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(glow)
+    glow_rgb = blend_rgb(theme_rgb, (255, 255, 255), 0.28)
+    draw.ellipse(
+        (-size * 0.22, -size * 0.10, size * 0.92, size * 0.94),
+        fill=(*glow_rgb, 170),
+    )
+    draw.ellipse(
+        (size * 0.35, -size * 0.20, size * 1.15, size * 0.55),
+        fill=(*theme_rgb, 96),
+    )
+    glow = glow.filter(ImageFilter.GaussianBlur(radius=size // 10))
+    canvas.alpha_composite(glow)
+
+    stripes = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    stripes_draw = ImageDraw.Draw(stripes)
+    stripe_rgb = blend_rgb(theme_rgb, (255, 255, 255), 0.10)
+    for offset in range(-size, size, max(size // 6, 18)):
+        stripes_draw.rectangle(
+            (offset, 0, offset + max(size // 18, 8), size),
+            fill=(*stripe_rgb, 38),
+        )
+    stripes = stripes.rotate(24, resample=Image.Resampling.BICUBIC, expand=False)
+    canvas.alpha_composite(stripes)
+    return canvas
+
+
+def compose_2026_driver_card(image_bytes: bytes, theme_hex: str, output_size: int = 160) -> bytes | None:
+    source = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    bbox = source.getchannel("A").getbbox()
+    if not bbox:
+        return None
+
+    left, top, right, bottom = bbox
+    width = right - left
+    height = bottom - top
+    pad_x = int(width * 0.06)
+    pad_top = int(height * 0.03)
+    upper_crop_bottom = min(source.height, top + int(height * 0.60))
+    cropped = source.crop(
+        (
+            max(0, left - pad_x),
+            max(0, top - pad_top),
+            min(source.width, right + pad_x),
+            upper_crop_bottom,
+        )
+    )
+
+    card = build_driver_card_background(output_size, hex_to_rgb(theme_hex))
+    inner_w = output_size - 24
+    inner_h = output_size - 16
+    scale = min(inner_w / cropped.width, inner_h / cropped.height)
+    resized = cropped.resize(
+        (max(1, int(cropped.width * scale)), max(1, int(cropped.height * scale))),
+        Image.Resampling.LANCZOS,
+    )
+    paste_x = (output_size - resized.width) // 2
+    paste_y = output_size - resized.height - 2
+    card.alpha_composite(resized, (paste_x, paste_y))
+
+    output = io.BytesIO()
+    card.save(output, format="PNG")
+    return output.getvalue()
+
+
+def fetch_2026_driver_card(name: str) -> bytes | None:
+    page_slug = SEASON_DRIVER_PAGE_SLUGS.get(2026, {}).get(name)
+    if not page_slug:
+        return None
+
+    html = fetch_text(f"https://www.formula1.com/en/drivers/{page_slug}", attempts=2)
+    if not html:
+        return None
+
+    og_match = DRIVER_PAGE_OG_IMAGE_RE.search(html)
+    if not og_match:
+        return None
+
+    og_url = og_match.group(1)
+    asset_match = COMMON_2026_DRIVER_RE.search(og_url)
+    if not asset_match:
+        return None
+
+    theme_match = OG_IMAGE_THEME_RE.search(og_url)
+    theme_hex = theme_match.group(1) if theme_match else "5b6472"
+    team_media_id, driver_media_id, asset_name = asset_match.groups()
+    image_url = (
+        "https://media.formula1.com/image/upload/"
+        "f_png,c_fill,w_720,q_auto/"
+        f"v1740000000/common/f1/2026/{team_media_id}/{driver_media_id}/{asset_name}.webp"
+    )
+    raw = fetch_bytes(image_url, attempts=2, reject_cloudinary_missing=True)
+    if not raw:
+        return None
+    return compose_2026_driver_card(raw, theme_hex)
+
+
 def build_team_car_url(season: int, team_media_id: str) -> str:
+    if season >= 2026:
+        return (
+            "https://media.formula1.com/image/upload/"
+            "f_png,c_lfill,w_512/q_auto/"
+            f"v1740000000/common/f1/{season}/{team_media_id}/{season}{team_media_id}carright.webp"
+        )
     return (
         "https://media.formula1.com/image/upload/"
         "f_png,c_lfill,w_512/"
@@ -275,6 +479,7 @@ def read_drivers_and_teams() -> tuple[dict[int, set[str]], dict[int, set[str]], 
                     season_teams.add(entry["team"])
 
         season_teams.update(DEFAULT_TEAMS_BY_SEASON.get(season, set()))
+        season_drivers.update(normalize_name(name) for name in DEFAULT_DRIVERS_BY_SEASON.get(season, set()))
         drivers_by_season[season] = season_drivers
         teams_by_season[season] = season_teams
         rounds_by_season[season] = season_rounds
@@ -317,11 +522,13 @@ def main() -> None:
                 continue
             target = season_dir / f"{slug}.png"
 
+            data = fetch_2026_driver_card(name.title()) if season == 2026 else None
             url = (
                 "https://media.formula1.com/image/upload/"
                 f"f_png,c_limit,w_160,q_auto/content/dam/fom-website/drivers/{season}Drivers/{slug}"
             )
-            data = fetch_bytes(url)
+            if not data:
+                data = fetch_bytes(url)
             if not data:
                 for alt in SEASON_DRIVER_FALLBACK_YEARS:
                     if alt == season:

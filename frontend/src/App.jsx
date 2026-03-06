@@ -45,6 +45,13 @@ const TEAM_COLORS = {
   "Alpine F1 Team": "#0090FF",
 };
 
+const SEASON_TEAM_COLOR_OVERRIDES = {
+  2026: {
+    "Audi": "#FF2D00",
+    "Cadillac": "#AAAAAD",
+  },
+};
+
 const TEAM_SLUGS = {
   "McLaren": "mclaren",
   "Red Bull": "red-bull",
@@ -88,6 +95,7 @@ const TELEMETRY_CARDS = [
 const DRIVER_PHOTO_SLUGS = {
   "alexander albon": "albon",
   "andrea kimi antonelli": "antonelli",
+  "arvid lindblad": "lindblad",
   "antonio giovinazzi": "giovinazzi",
   "carlos sainz": "sainz",
   "charles leclerc": "leclerc",
@@ -101,6 +109,7 @@ const DRIVER_PHOTO_SLUGS = {
   "isack hadjar": "hadjar",
   "jack doohan": "doohan",
   "kevin magnussen": "magnussen",
+  "kimi antonelli": "antonelli",
   "kimi raikkonen": "raikkonen",
   "lance stroll": "stroll",
   "lando norris": "norris",
@@ -245,24 +254,28 @@ function DriverPortrait({ driverName, season, roundNo }) {
   );
 }
 
-function colorForDriver(driverName, driverTeamMap, index) {
+function colorForDriver(driverName, driverTeamMap, index, season) {
   const teamName = driverTeamMap[driverName];
-  if (teamName && TEAM_COLORS[teamName]) {
-    return TEAM_COLORS[teamName];
+  if (teamName) {
+    const teamColor = colorForTeam(teamName, undefined, season);
+    if (teamColor) return teamColor;
   }
   const fallbackHue = (index * 47) % 360;
   return `hsl(${fallbackHue} 70% 42%)`;
 }
 
-function colorForTeam(teamName, fallback = "#d7263d") {
+function colorForTeam(teamName, fallback = "#d7263d", season) {
   const raw = String(teamName || "").trim();
   if (!raw) return fallback;
+  const seasonOverrides = SEASON_TEAM_COLOR_OVERRIDES[Number(season)] || {};
+  if (seasonOverrides[raw]) return seasonOverrides[raw];
   if (TEAM_COLORS[raw]) return TEAM_COLORS[raw];
 
   const normalized = normalizeName(raw);
   const alias = TEAM_COLOR_ALIASES[normalized];
-  if (alias && TEAM_COLORS[alias]) {
-    return TEAM_COLORS[alias];
+  if (alias) {
+    if (seasonOverrides[alias]) return seasonOverrides[alias];
+    if (TEAM_COLORS[alias]) return TEAM_COLORS[alias];
   }
 
   return fallback;
@@ -673,7 +686,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     <div className="casual-layout">
       <div className={`top-grid ${isSprintWeekend ? "sprint-weekend" : ""}`}>
         <div className="card top-card driver-card">
-        <h3>Driver Standings (All Drivers)</h3>
+        <h3>Driver Standings</h3>
         <div className="table-scroll card-table-wrap">
           <table>
             <thead>
@@ -703,22 +716,24 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
         <div className="table-scroll card-table-wrap">
           <table>
           <thead>
-            <tr><th>Pos</th><th></th><th>Team</th><th>Podiums</th><th>Pts</th></tr>
+            <tr><th>Pos</th><th>Team</th><th>Podiums</th><th>Pts</th></tr>
           </thead>
           <tbody>
             {overview?.constructor_standings?.length
               ? overview.constructor_standings.map((c) => (
                 <tr key={c.position}>
                   <td>{c.position}</td>
-                  <td className="logo-cell">
-                    <TeamLogo teamName={c.team} season={overview?.season || 2025} roundNo={roundNo} />
+                  <td className="constructor-team-cell">
+                    <div className="constructor-team-stack">
+                      <span className="constructor-team-name">{c.team}</span>
+                      <TeamLogo teamName={c.team} season={overview?.season || 2025} roundNo={roundNo} />
+                    </div>
                   </td>
-                  <td>{c.team}</td>
                   <td>{c.podiums ?? 0}</td>
                   <td>{c.points}</td>
                 </tr>
               ))
-              : <tr><td colSpan={5} className="small">{noDataText}</td></tr>}
+              : <tr><td colSpan={4} className="small">{noDataText}</td></tr>}
           </tbody>
           </table>
         </div>
@@ -919,7 +934,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                 key={driver}
                 type="monotone"
                 dataKey={driver}
-                stroke={colorForDriver(driver, driverTeamMap, idx)}
+                stroke={colorForDriver(driver, driverTeamMap, idx, overview?.season)}
                 strokeWidth={1.8}
                 dot={false}
               />
@@ -942,7 +957,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                 key={team}
                 type="monotone"
                 dataKey={team}
-                stroke={TEAM_COLORS[team] || `hsl(${(idx * 47) % 360} 70% 42%)`}
+                stroke={colorForTeam(team, `hsl(${(idx * 47) % 360} 70% 42%)`, overview?.season)}
                 strokeWidth={2}
                 dot={false}
               />
@@ -1056,8 +1071,8 @@ function EngineeringPanel({ roundNo, season, race }) {
   }, [analysis]);
 
   const sectorBarColor = useMemo(
-    () => colorForTeam(analysis?.team, "#d7263d"),
-    [analysis]
+    () => colorForTeam(analysis?.team, "#d7263d", analysis?.season || season),
+    [analysis, season]
   );
 
   useEffect(() => {
@@ -1439,7 +1454,7 @@ function EngineeringPanel({ roundNo, season, race }) {
   const positionDriverColors = useMemo(() => {
     const map = {};
     for (const [idx, name] of positionDrivers.entries()) {
-      map[name] = colorForDriver(name, positionDriverTeamMap, idx);
+      map[name] = colorForDriver(name, positionDriverTeamMap, idx, season);
     }
     return map;
   }, [positionDrivers, positionDriverTeamMap]);
@@ -1582,8 +1597,8 @@ function EngineeringPanel({ roundNo, season, race }) {
   const h2hPaceB = h2hData?.lap_times?.pace?.driver_b || null;
   const sectorsAvailable = Boolean(h2hData?.track_dominance?.sectors_available);
 
-  const h2hColorA = colorForTeam(h2hDriverInfoA?.team, "#e11d48");
-  const h2hColorB = colorForTeam(h2hDriverInfoB?.team, "#2563eb");
+  const h2hColorA = colorForTeam(h2hDriverInfoA?.team, "#e11d48", season);
+  const h2hColorB = colorForTeam(h2hDriverInfoB?.team, "#2563eb", season);
 
   const h2hLapChartData = useMemo(
     () => h2hCommonLaps.map((item) => ({
@@ -1685,10 +1700,10 @@ function EngineeringPanel({ roundNo, season, race }) {
   const telemetryDriverColors = useMemo(() => {
     const map = {};
     telemetryDriverNames.forEach((name, idx) => {
-      map[name] = colorForDriver(name, telemetryDriverTeamMap, idx);
+      map[name] = colorForDriver(name, telemetryDriverTeamMap, idx, season);
     });
     return map;
-  }, [telemetryDriverNames, telemetryDriverTeamMap]);
+  }, [season, telemetryDriverNames, telemetryDriverTeamMap]);
   const telemetryDriverByName = useMemo(() => {
     const map = {};
     telemetryDrivers.forEach((item) => {
@@ -1884,7 +1899,7 @@ function EngineeringPanel({ roundNo, season, race }) {
                 {positionsSummaryRows.length ? positionsSummaryRows.map((row) => (
                   <tr key={`${row.driver}-${row.position}`}>
                     <td>{row.finishPosition ?? "-"}</td>
-                    <td style={{ color: colorForTeam(row.team, "#dce7ff") }}>{row.driver || "-"}</td>
+                    <td style={{ color: colorForTeam(row.team, "#dce7ff", race?.season || season) }}>{row.driver || "-"}</td>
                     <td>{row.team || "-"}</td>
                     <td>{row.time || "-"}</td>
                     <td>{Number.isFinite(Number(row.points)) ? Number(row.points).toFixed(1) : "-"}</td>
@@ -2606,7 +2621,7 @@ function LinkedinIcon() {
 
 export default function App() {
   const [mode, setMode] = useState("casual");
-  const [season, setSeason] = useState(2025);
+  const [season, setSeason] = useState(2026);
   const [seasons, setSeasons] = useState([]);
   const [roundNo, setRoundNo] = useState(1);
   const [overview, setOverview] = useState(null);

@@ -568,6 +568,14 @@ select {
   overflow: auto;
 }
 
+.driver-card .card-table-wrap,
+.constructor-card .card-table-wrap,
+.session-standings-card .card-table-wrap {
+  margin-right: -0.72rem;
+  padding-right: 0.72rem;
+  scrollbar-gutter: stable;
+}
+
 .progression-card,
 .rounds-card {
   width: 100%;
@@ -596,6 +604,10 @@ table {
   font-size: 0.7rem;
 }
 
+.constructor-card table {
+  table-layout: auto;
+}
+
 .top-grid th,
 .top-grid td {
   padding: 0.28rem 0.22rem;
@@ -603,19 +615,20 @@ table {
 
 .top-grid td {
   white-space: normal;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .top-grid .avatar-cell,
 .top-grid .logo-cell {
-  width: 34px;
-  min-width: 34px;
+  width: 40px;
+  min-width: 40px;
 }
 
 .top-grid .avatar-img,
 .top-grid .team-logo {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
 }
 
 .driver-card th:nth-child(1),
@@ -655,6 +668,49 @@ table {
   text-align: center;
 }
 
+.constructor-card th:nth-child(2),
+.constructor-card td:nth-child(2) {
+  width: 52%;
+  min-width: 98px;
+  text-align: center;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.constructor-card th:nth-child(3),
+.constructor-card td:nth-child(3) {
+  width: 22%;
+  min-width: 58px;
+  text-align: center;
+}
+
+.constructor-card th:nth-child(4),
+.constructor-card td:nth-child(4) {
+  width: 14%;
+  min-width: 34px;
+  text-align: center;
+}
+
+.constructor-team-cell {
+  vertical-align: middle;
+}
+
+.constructor-team-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+}
+
+.constructor-team-name {
+  line-height: 1.15;
+}
+
+.constructor-card .team-logo {
+  width: 60px;
+  height: 20px;
+}
+
 th,
 td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
@@ -677,13 +733,13 @@ thead th {
 
 .avatar-cell,
 .logo-cell {
-  width: 46px;
-  min-width: 46px;
+  width: 52px;
+  min-width: 52px;
 }
 
 .avatar-img {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   border-radius: 999px;
   object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -691,8 +747,8 @@ thead th {
 }
 
 .team-logo {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   object-fit: contain;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.32));
 }

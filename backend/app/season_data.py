@@ -12,6 +12,45 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 SUPPORTED_SEASONS = list(range(2021, 2027))
 _LAST_FETCH_TS = 0.0
 
+PRESEASON_2026_DRIVER_STANDINGS = [
+    {"driver": "Alexander Albon", "team": "Williams"},
+    {"driver": "Fernando Alonso", "team": "Aston Martin"},
+    {"driver": "Kimi Antonelli", "team": "Mercedes"},
+    {"driver": "Oliver Bearman", "team": "Haas F1 Team"},
+    {"driver": "Gabriel Bortoleto", "team": "Audi"},
+    {"driver": "Valtteri Bottas", "team": "Cadillac"},
+    {"driver": "Franco Colapinto", "team": "Alpine F1 Team"},
+    {"driver": "Pierre Gasly", "team": "Alpine F1 Team"},
+    {"driver": "Isack Hadjar", "team": "Red Bull"},
+    {"driver": "Lewis Hamilton", "team": "Ferrari"},
+    {"driver": "Nico Hulkenberg", "team": "Audi"},
+    {"driver": "Liam Lawson", "team": "RB F1 Team"},
+    {"driver": "Charles Leclerc", "team": "Ferrari"},
+    {"driver": "Arvid Lindblad", "team": "RB F1 Team"},
+    {"driver": "Lando Norris", "team": "McLaren"},
+    {"driver": "Esteban Ocon", "team": "Haas F1 Team"},
+    {"driver": "Sergio Perez", "team": "Cadillac"},
+    {"driver": "Oscar Piastri", "team": "McLaren"},
+    {"driver": "George Russell", "team": "Mercedes"},
+    {"driver": "Carlos Sainz", "team": "Williams"},
+    {"driver": "Lance Stroll", "team": "Aston Martin"},
+    {"driver": "Max Verstappen", "team": "Red Bull"},
+]
+
+PRESEASON_2026_CONSTRUCTOR_STANDINGS = [
+    "McLaren",
+    "Ferrari",
+    "Mercedes",
+    "Red Bull",
+    "Aston Martin",
+    "Williams",
+    "RB F1 Team",
+    "Haas F1 Team",
+    "Audi",
+    "Alpine F1 Team",
+    "Cadillac",
+]
+
 
 def fetch(path: str, **query: str | int) -> dict:
     global _LAST_FETCH_TS
@@ -170,6 +209,60 @@ def ensure_standings_podiums(data: dict) -> bool:
         if row.get("podiums") != podiums:
             row["podiums"] = podiums
             changed = True
+
+    return changed
+
+
+def ensure_preseason_standings(data: dict) -> bool:
+    season = int(data.get("season", 0) or 0)
+    if season != 2026:
+        return False
+    if data.get("driver_standings") and data.get("constructor_standings"):
+        return False
+
+    changed = False
+    if not data.get("driver_standings"):
+        data["driver_standings"] = [
+            {
+                "position": idx,
+                "driver": item["driver"],
+                "team": item["team"],
+                "points": 0.0,
+                "wins": 0,
+                "podiums": 0,
+            }
+            for idx, item in enumerate(PRESEASON_2026_DRIVER_STANDINGS, start=1)
+        ]
+        changed = True
+
+    if not data.get("constructor_standings"):
+        data["constructor_standings"] = [
+            {
+                "position": idx,
+                "team": team,
+                "points": 0.0,
+                "wins": 0,
+                "podiums": 0,
+            }
+            for idx, team in enumerate(PRESEASON_2026_CONSTRUCTOR_STANDINGS, start=1)
+        ]
+        changed = True
+
+    if not data.get("progression_drivers"):
+        data["progression_drivers"] = [item["driver"] for item in PRESEASON_2026_DRIVER_STANDINGS]
+        changed = True
+
+    if not data.get("progression_constructors"):
+        data["progression_constructors"] = PRESEASON_2026_CONSTRUCTOR_STANDINGS.copy()
+        changed = True
+
+    for row in data.get("points_progression", []):
+        for driver in data.get("progression_drivers", []):
+            row.setdefault(driver, 0.0)
+
+    for row in data.get("constructor_points_progression", []):
+        for team in data.get("progression_constructors", []):
+            row.setdefault(team, 0.0)
 
     return changed
 
@@ -354,6 +447,7 @@ def build_season_dataset(season: int) -> dict:
         "rounds_summary": [r["summary"] for r in rounds],
         "rounds": rounds,
     }
+    ensure_preseason_standings(data)
     align_driver_standings_teams(data)
     ensure_standings_podiums(data)
     validate_dataset(data)
@@ -367,7 +461,8 @@ def load_or_build_season(season: int, force_refresh: bool = False) -> dict:
     target = season_file(season)
     if target.exists() and not force_refresh:
         data = json.loads(target.read_text(encoding="utf-8"))
-        changed = align_driver_standings_teams(data)
+        changed = ensure_preseason_standings(data)
+        changed = align_driver_standings_teams(data) or changed
         changed = ensure_standings_podiums(data) or changed
         validate_dataset(data)
         if changed:
