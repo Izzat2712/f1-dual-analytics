@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sklearn.linear_model import LinearRegression
 
-from .season_data import BASE, SUPPORTED_SEASONS, fetch, load_or_build_season, map_driver, normalize_constructor_name
+from .season_data import BASE, SUPPORTED_SEASONS, fetch, load_or_build_season, map_driver, normalize_constructor_name, season_file
 
 app = FastAPI(title="F1 Dual-Mode Analytics API", version="0.1.0")
 OPENF1_BASE = "https://api.openf1.org/v1"
@@ -163,6 +163,7 @@ model = LinearRegression()
 model.fit(X_train, y_train)
 
 SEASON_CACHE: dict[int, dict] = {}
+SEASON_CACHE_MTIME_NS: dict[int, int | None] = {}
 POSITIONS_CACHE: dict[tuple[int, int, str], dict] = {}
 TYRE_STRATEGY_CACHE: dict[tuple[int, int], dict] = {}
 TYRE_STRATEGY_CACHE_VERSION = 8
@@ -175,15 +176,28 @@ POSITIONS_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "positions_
 POSITIONS_CACHE_VERSION = 5
 
 
+def get_season_cache_mtime_ns(season: int) -> int | None:
+    target = season_file(season)
+    if not target.exists():
+        return None
+    try:
+        return target.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
 def get_season_data(season: int) -> dict:
     if season not in SUPPORTED_SEASONS:
         raise HTTPException(
             status_code=400,
             detail=f"Season {season} is not supported. Supported: {SUPPORTED_SEASONS[0]}-{SUPPORTED_SEASONS[-1]}",
         )
-    if season not in SEASON_CACHE:
+    current_mtime_ns = get_season_cache_mtime_ns(season)
+    cached_mtime_ns = SEASON_CACHE_MTIME_NS.get(season)
+    if season not in SEASON_CACHE or cached_mtime_ns != current_mtime_ns:
         try:
             SEASON_CACHE[season] = load_or_build_season(season)
+            SEASON_CACHE_MTIME_NS[season] = get_season_cache_mtime_ns(season)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Failed to load season {season}: {exc}") from exc
     return SEASON_CACHE[season]
