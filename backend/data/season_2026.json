@@ -1244,8 +1244,8 @@
       "country": "Australia",
       "winner": null,
       "winner_team": null,
-      "pole": null,
-      "pole_time": null,
+      "pole": "George Russell",
+      "pole_time": "1:18.518",
       "fastest_lap_driver": null,
       "fastest_lap_time": null,
       "had_sprint": false
@@ -1586,7 +1586,162 @@
       "results": [],
       "sprint_qualifying": [],
       "sprint": [],
-      "qualifying": [],
+      "qualifying": [
+        {
+          "position": 1,
+          "driver": "George Russell",
+          "q1": "1:19.507",
+          "q2": "1:18.934",
+          "q3": "1:18.518"
+        },
+        {
+          "position": 2,
+          "driver": "Kimi Antonelli",
+          "q1": "1:20.120",
+          "q2": "1:19.435",
+          "q3": "1:18.811"
+        },
+        {
+          "position": 3,
+          "driver": "Isack Hadjar",
+          "q1": "1:20.023",
+          "q2": "1:19.653",
+          "q3": "1:19.303"
+        },
+        {
+          "position": 4,
+          "driver": "Charles Leclerc",
+          "q1": "1:20.226",
+          "q2": "1:19.357",
+          "q3": "1:19.327"
+        },
+        {
+          "position": 5,
+          "driver": "Oscar Piastri",
+          "q1": "1:19.664",
+          "q2": "1:19.525",
+          "q3": "1:19.380"
+        },
+        {
+          "position": 6,
+          "driver": "Lando Norris",
+          "q1": "1:20.010",
+          "q2": "1:19.882",
+          "q3": "1:19.475"
+        },
+        {
+          "position": 7,
+          "driver": "Lewis Hamilton",
+          "q1": "1:19.811",
+          "q2": "1:19.921",
+          "q3": "1:19.478"
+        },
+        {
+          "position": 8,
+          "driver": "Liam Lawson",
+          "q1": "1:20.491",
+          "q2": "1:20.144",
+          "q3": "1:19.994"
+        },
+        {
+          "position": 9,
+          "driver": "Arvid Lindblad",
+          "q1": "1:20.409",
+          "q2": "1:19.971",
+          "q3": "1:21.247"
+        },
+        {
+          "position": 10,
+          "driver": "Gabriel Bortoleto",
+          "q1": "1:20.495",
+          "q2": "1:20.221",
+          "q3": null
+        },
+        {
+          "position": 11,
+          "driver": "Nico Hulkenberg",
+          "q1": "1:21.024",
+          "q2": "1:20.303",
+          "q3": null
+        },
+        {
+          "position": 12,
+          "driver": "Oliver Bearman",
+          "q1": "1:21.247",
+          "q2": "1:20.311",
+          "q3": null
+        },
+        {
+          "position": 13,
+          "driver": "Esteban Ocon",
+          "q1": "1:20.759",
+          "q2": "1:20.491",
+          "q3": null
+        },
+        {
+          "position": 14,
+          "driver": "Pierre Gasly",
+          "q1": "1:21.138",
+          "q2": "1:20.501",
+          "q3": null
+        },
+        {
+          "position": 15,
+          "driver": "Alexander Albon",
+          "q1": "1:21.051",
+          "q2": "1:20.941",
+          "q3": null
+        },
+        {
+          "position": 16,
+          "driver": "Franco Colapinto",
+          "q1": "1:21.200",
+          "q2": "1:21.270",
+          "q3": null
+        },
+        {
+          "position": 17,
+          "driver": "Fernando Alonso",
+          "q1": "1:21.969",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 18,
+          "driver": "Sergio Perez",
+          "q1": "1:22.605",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 19,
+          "driver": "Valtteri Bottas",
+          "q1": "1:23.244",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 20,
+          "driver": "Max Verstappen",
+          "q1": null,
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 21,
+          "driver": "Carlos Sainz",
+          "q1": null,
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 22,
+          "driver": "Lance Stroll",
+          "q1": null,
+          "q2": null,
+          "q3": null
+        }
+      ],
       "practice": {
         "fp1_best": "Data unavailable from Ergast endpoint",
         "fp2_best": "Data unavailable from Ergast endpoint",
@@ -1600,8 +1755,8 @@
         "country": "Australia",
         "winner": null,
         "winner_team": null,
-        "pole": null,
-        "pole_time": null,
+        "pole": "George Russell",
+        "pole_time": "1:18.518",
         "fastest_lap_driver": null,
         "fastest_lap_time": null,
         "had_sprint": false
