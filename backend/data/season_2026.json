@@ -1246,8 +1246,8 @@
       "winner_team": "Mercedes",
       "pole": "George Russell",
       "pole_time": "1:18.518",
-      "fastest_lap_driver": null,
-      "fastest_lap_time": null,
+      "fastest_lap_driver": "Max Verstappen",
+      "fastest_lap_time": "1:22.091",
       "had_sprint": false
     },
     {
@@ -1956,8 +1956,8 @@
         "winner_team": "Mercedes",
         "pole": "George Russell",
         "pole_time": "1:18.518",
-        "fastest_lap_driver": null,
-        "fastest_lap_time": null,
+        "fastest_lap_driver": "Max Verstappen",
+        "fastest_lap_time": "1:22.091",
         "had_sprint": false
       }
     },
