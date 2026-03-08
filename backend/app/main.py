@@ -799,6 +799,8 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                 participated = not non_starter and (
                     official_completed_laps > 0 or max_lap_from_times > 0 or max_lap_from_stints > 0 or bool(raw_stints_all)
                 )
+                if not participated:
+                    continue
                 early_dnf = is_dnf and not non_starter and driver_limit <= 1
 
                 stints = []
@@ -992,6 +994,17 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                         "stints": stints,
                     }
                 )
+
+            meaningful_compound_count = sum(
+                1
+                for driver in drivers
+                for stint in driver.get("stints", [])
+                if str(stint.get("compound", "")).strip().upper() not in {"", "UNKNOWN"}
+            )
+            if meaningful_compound_count == 0:
+                payload = _empty_tyre_strategy_payload()
+                TYRE_STRATEGY_CACHE[key] = payload
+                return payload
 
             payload = {
                 "season": season,

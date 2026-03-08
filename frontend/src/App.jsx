@@ -1778,7 +1778,15 @@ function EngineeringPanel({ roundNo, season, race }) {
   const renderTyreStrategyTab = () => {
     const totalLaps = Math.max(1, Number(tyreStrategyData?.total_laps || 0));
     const selected = selectedTyreStint?.stint || null;
-    const hasSolidTyreStrategyData = (tyreStrategyData?.source || "") !== "unavailable" && (tyreStrategyData?.drivers?.length || 0) > 0;
+    const hasMeaningfulTyreCompounds = (tyreStrategyData?.drivers || []).some((driverRow) =>
+      (driverRow.stints || []).some((stint) => {
+        const compound = String(stint?.compound || "").trim().toUpperCase();
+        return compound && compound !== "UNKNOWN";
+      })
+    );
+    const hasSolidTyreStrategyData = (tyreStrategyData?.source || "") !== "unavailable"
+      && (tyreStrategyData?.drivers?.length || 0) > 0
+      && hasMeaningfulTyreCompounds;
 
     return (
       <div className="grid">
