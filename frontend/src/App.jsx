@@ -16,14 +16,11 @@ import {
   getRoundResults,
   getRoundsSummary,
   getSessionSchedule,
-  getEngineeringDriverAnalysis,
   getEngineeringPositions,
   getEngineeringTyreStrategy,
   getEngineeringH2H,
   getEngineeringTelemetryCatalog,
   getEngineeringTelemetryTrace,
-  simulateNetwork,
-  simulateStrategy,
 } from "./api";
 import { Analytics } from "@vercel/analytics/react";
 import "./styles.css";
@@ -998,9 +995,6 @@ function EngineeringPanel({ roundNo, season, race }) {
   const [engineeringTab, setEngineeringTab] = useState("positions");
   const [positionsViewTab, setPositionsViewTab] = useState("lap_by_lap");
   const [positionsSession, setPositionsSession] = useState("race");
-  const [driver, setDriver] = useState("");
-  const [analysis, setAnalysis] = useState(null);
-  const [teammateAnalysis, setTeammateAnalysis] = useState(null);
   const [positionsData, setPositionsData] = useState(null);
   const [positionsLoading, setPositionsLoading] = useState(false);
   const [positionsError, setPositionsError] = useState("");
@@ -1030,60 +1024,12 @@ function EngineeringPanel({ roundNo, season, race }) {
   const [telemetryTraces, setTelemetryTraces] = useState({});
   const [telemetryCardLoading, setTelemetryCardLoading] = useState({});
   const telemetryFetchSignatureRef = useRef({});
-  const [networkInput, setNetworkInput] = useState({
-    packets: 180,
-    base_latency_ms: 50,
-    jitter_ms: 10,
-    packet_loss_rate: 0.03,
-    bandwidth_mbps: 3.5,
-  });
-  const [networkWhatIf, setNetworkWhatIf] = useState(null);
-  const [strategyInput, setStrategyInput] = useState({
-    total_laps: 57,
-    pit_window_start: 14,
-    pit_window_end: 32,
-    simulations: 600,
-  });
-  const [strategyWhatIf, setStrategyWhatIf] = useState(null);
 
   const drivers = useMemo(() => race?.results?.map((r) => r.driver) || [], [race]);
   const isSprintWeekend = useMemo(
     () => Boolean((race?.sprint_qualifying?.length || 0) > 0 || (race?.sprint?.length || 0) > 0),
     [race]
   );
-  const teammate = useMemo(() => {
-    if (!analysis || !race?.results) return null;
-    const match = race.results.find((r) => r.team === analysis.team && r.driver !== analysis.driver);
-    return match?.driver || null;
-  }, [analysis, race]);
-
-  const sectorBreakdown = useMemo(() => {
-    if (!analysis?.lap_prediction?.predicted_lap_time_s) return [];
-    const lap = Number(analysis.lap_prediction.predicted_lap_time_s);
-    const s1 = lap * 0.33;
-    const s2 = lap * 0.4;
-    const s3 = lap * 0.27;
-    return [
-      { sector: "S1", time_s: Number(s1.toFixed(3)) },
-      { sector: "S2", time_s: Number(s2.toFixed(3)) },
-      { sector: "S3", time_s: Number(s3.toFixed(3)) },
-    ];
-  }, [analysis]);
-
-  const sectorBarColor = useMemo(
-    () => colorForTeam(analysis?.team, "#d7263d", analysis?.season || season),
-    [analysis, season]
-  );
-
-  useEffect(() => {
-    if (!drivers.length) {
-      setDriver("");
-      return;
-    }
-    if (!driver || !drivers.includes(driver)) {
-      setDriver(drivers[0]);
-    }
-  }, [drivers, driver]);
 
   useEffect(() => {
     if (!drivers.length) {
@@ -1102,50 +1048,6 @@ function EngineeringPanel({ roundNo, season, race }) {
     }
   }, [drivers, h2hDriverA, h2hDriverB]);
 
-  useEffect(() => {
-    if (!driver || !roundNo) return;
-    let cancelled = false;
-    getEngineeringDriverAnalysis({ season, round_no: roundNo, driver })
-      .then((payload) => {
-        if (cancelled) return;
-        setAnalysis(payload);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setAnalysis(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [roundNo, season, driver]);
-
-  useEffect(() => {
-    if (!teammate || !roundNo) {
-      setTeammateAnalysis(null);
-      return;
-    }
-    let cancelled = false;
-    getEngineeringDriverAnalysis({ season, round_no: roundNo, driver: teammate })
-      .then((payload) => {
-        if (cancelled) return;
-        setTeammateAnalysis(payload);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setTeammateAnalysis(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [roundNo, season, teammate]);
-
-  useEffect(() => {
-    simulateNetwork(networkInput).then(setNetworkWhatIf);
-  }, [networkInput]);
-
-  useEffect(() => {
-    simulateStrategy(strategyInput).then(setStrategyWhatIf);
-  }, [strategyInput]);
 
   useEffect(() => {
     if (!roundNo) return;
@@ -1377,61 +1279,6 @@ function EngineeringPanel({ roundNo, season, race }) {
     telemetryFetchSignatureRef.current = {};
   }, [roundNo, season]);
 
-  const telemetryGraph = (analysis?.telemetry?.smoothed?.speed || []).map((s, i) => ({
-    idx: i,
-    speed: s,
-    throttle: analysis?.telemetry?.smoothed?.throttle?.[i] || 0,
-    brake: analysis?.telemetry?.smoothed?.brake?.[i] || 0,
-  }));
-
-  const telemetryDelta = analysis && teammateAnalysis
-    ? {
-        speed: Number((analysis.telemetry.summary.avg_speed - teammateAnalysis.telemetry.summary.avg_speed).toFixed(2)),
-        drs: Number((analysis.telemetry.summary.drs_usage_estimate_pct - teammateAnalysis.telemetry.summary.drs_usage_estimate_pct).toFixed(2)),
-        lap: Number((analysis.lap_prediction.predicted_lap_time_s - teammateAnalysis.lap_prediction.predicted_lap_time_s).toFixed(3)),
-      }
-    : null;
-
-  const engineerRadio = useMemo(() => {
-    if (!analysis) return null;
-
-    const risk = networkWhatIf?.strategy_decision_risk || analysis?.network?.strategy_decision_risk || "LOW";
-    const bestPitLap = strategyWhatIf?.best_pit_lap || analysis?.strategy?.best_pit_lap;
-    const lapDelta = telemetryDelta?.lap ?? 0;
-
-    if (risk === "HIGH") {
-      return {
-        call: "Hold current strategy. Telemetry link unstable, avoid aggressive reactive calls.",
-        confidence: "MEDIUM",
-      };
-    }
-
-    if (bestPitLap <= strategyInput.pit_window_start + 1 && lapDelta < 0) {
-      return {
-        call: `Box at window open (lap ${bestPitLap}). Undercut favored and pace delta is positive.`,
-        confidence: "HIGH",
-      };
-    }
-
-    if (bestPitLap >= strategyInput.pit_window_end - 1) {
-      return {
-        call: `Extend stint to lap ${bestPitLap}. Overcut profile currently stronger.`,
-        confidence: "MEDIUM",
-      };
-    }
-
-    if (lapDelta > 0.2) {
-      return {
-        call: `Manage tyres and traffic, target pit lap ${bestPitLap}. Teammate pace currently stronger.`,
-        confidence: "MEDIUM",
-      };
-    }
-
-    return {
-      call: `Target pit lap ${bestPitLap}. Maintain push mode with current tyre management profile.`,
-      confidence: "HIGH",
-    };
-  }, [analysis, networkWhatIf, strategyWhatIf, strategyInput, telemetryDelta]);
 
   const positionDriverTeamMap = useMemo(() => {
     const map = {};
@@ -2416,15 +2263,6 @@ function EngineeringPanel({ roundNo, season, race }) {
     </div>
   );
 
-  const renderWhatIfTab = () => (
-    <div className="grid">
-      <div className="card wide-card">
-        <h3>Race Engineer</h3>
-        <div className="small">No data</div>
-      </div>
-    </div>
-  );
-
   const renderDiagnosticsTab = () => (
     <div className="grid">
       <div className="card wide-card">
@@ -2441,14 +2279,12 @@ function EngineeringPanel({ roundNo, season, race }) {
         <button className={engineeringTab === "tyre_strategy" ? "active" : ""} onClick={() => setEngineeringTab("tyre_strategy")}>Tyre Strategy</button>
         <button className={engineeringTab === "h2h" ? "active" : ""} onClick={() => setEngineeringTab("h2h")}>H2H</button>
         <button className={engineeringTab === "telemetry" ? "active" : ""} onClick={() => setEngineeringTab("telemetry")}>Telemetry</button>
-        <button className={engineeringTab === "whatif" ? "active" : ""} onClick={() => setEngineeringTab("whatif")}>Race Engineer</button>
         <button className={engineeringTab === "diagnostics" ? "active" : ""} onClick={() => setEngineeringTab("diagnostics")}>COMING SOON</button>
       </div>
       {engineeringTab === "positions" ? renderPositionsTab() : null}
       {engineeringTab === "tyre_strategy" ? renderTyreStrategyTab() : null}
       {engineeringTab === "h2h" ? renderH2HTab() : null}
       {engineeringTab === "telemetry" ? renderTelemetryTab() : null}
-      {engineeringTab === "whatif" ? renderWhatIfTab() : null}
       {engineeringTab === "diagnostics" ? renderDiagnosticsTab() : null}
     </div>
   );

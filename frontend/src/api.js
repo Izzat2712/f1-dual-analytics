@@ -25,61 +25,6 @@ export async function getSessionSchedule(season) {
   return res.json();
 }
 
-export async function getEngineeringDriverAnalysis(payload) {
-  const res = await fetch(`${API_BASE}/api/engineering/driver-analysis`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const body = await res.json();
-      detail = body?.detail ? `: ${body.detail}` : "";
-    } catch {
-      // Ignore body parse failures; keep generic message.
-    }
-    throw new Error(`Failed to load driver analysis (${res.status})${detail}`);
-  }
-  return res.json();
-}
-
-export async function analyzeTelemetry(payload) {
-  const res = await fetch(`${API_BASE}/api/engineering/telemetry/analyze`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-}
-
-export async function predictLap(payload) {
-  const res = await fetch(`${API_BASE}/api/engineering/lap/predict`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-}
-
-export async function simulateStrategy(payload) {
-  const res = await fetch(`${API_BASE}/api/engineering/strategy/simulate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-}
-
-export async function simulateNetwork(payload) {
-  const res = await fetch(`${API_BASE}/api/engineering/network/simulate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
-}
-
 export async function getEngineeringPositions(roundNo, season, session = "race") {
   const res = await fetch(
     `${API_BASE}/api/engineering/positions/${roundNo}?season=${season}&session=${encodeURIComponent(session)}`
