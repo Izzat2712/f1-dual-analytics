@@ -600,6 +600,21 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
             "avg_lap": format_lap_time(avg),
         }
 
+    def _empty_tyre_strategy_payload() -> dict:
+        return {
+            "season": season,
+            "round": round_no,
+            "race": round_payload.get("race"),
+            "session": normalized_session,
+            "total_laps": 0,
+            "drivers": [],
+            "source": "unavailable",
+            "notes": {
+                "compound": "",
+                "metrics": "",
+            },
+        }
+
     rows_source = round_payload.get("sprint") if normalized_session == "sprint" else round_payload.get("results")
     rows = sorted(rows_source or [], key=lambda item: _safe_position(item.get("position")))
     if not rows:
@@ -997,103 +1012,7 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
         # Fallback below preserves availability when OpenF1 is unavailable.
         pass
 
-    # Fallback source: Jolpica timing + pitstops with estimated compounds.
-    raw_results = load_official_results_rows(season, round_no, normalized_session)
-    driver_id_to_name: dict[str, str] = {}
-    for row in raw_results:
-        driver = row.get("Driver", {})
-        driver_id = driver.get("driverId")
-        driver_name = map_driver(driver) if driver else None
-        if driver_id and driver_name:
-            driver_id_to_name[driver_id] = driver_name
-
-    try:
-        lap_times_by_driver, max_lap_seen = load_lap_times_by_driver(season, round_no, driver_id_to_name)
-    except Exception:
-        lap_times_by_driver, max_lap_seen = {}, 0
-    pit_laps_by_driver = load_pit_laps_by_driver(season, round_no, driver_id_to_name) if normalized_session == "race" else {}
-    total_laps = expected_lap_count(season, round_no, raw_results) or max_lap_seen
-    if total_laps <= 0:
-        total_laps = 57
-
-    drivers = []
-    for result in rows:
-        driver_name = result.get("driver")
-        if not driver_name:
-            continue
-        driver_lap_times = lap_times_by_driver.get(driver_name, {})
-        is_dnf = not is_classified_finisher_status(result.get("status"))
-        non_starter = is_non_starter_status(result.get("status"))
-        max_driver_lap = max(driver_lap_times.keys(), default=0)
-        if is_dnf:
-            driver_limit = min(total_laps, max_driver_lap) if max_driver_lap > 0 else 0
-        else:
-            driver_limit = total_laps
-        early_dnf = is_dnf and not non_starter and driver_limit <= 1
-
-        pit_laps = [lap for lap in (pit_laps_by_driver.get(driver_name) or []) if 0 < lap < max(driver_limit, 1)]
-        boundaries = sorted(set(pit_laps))
-
-        stints = []
-        if early_dnf:
-            stints = [_compute_stint_metrics(1, "UNKNOWN", 1, 1, driver_lap_times)]
-        else:
-            start_lap = 1
-            stint_index = 1
-            for stop_lap in boundaries + ([driver_limit] if driver_limit > 0 else []):
-                end_lap = stop_lap
-                if end_lap < start_lap:
-                    continue
-                laps_count = (end_lap - start_lap) + 1
-                stints.append(
-                    _compute_stint_metrics(
-                        stint_index=stint_index,
-                        compound=estimate_compound_by_stint_length(laps_count),
-                        start_lap=start_lap,
-                        end_lap=end_lap,
-                        lap_times_by_lap=driver_lap_times,
-                    )
-                )
-                stint_index += 1
-                start_lap = end_lap + 1
-
-        if not stints and driver_limit > 0:
-            stints = [_compute_stint_metrics(1, "MEDIUM", 1, driver_limit, driver_lap_times)]
-
-        if is_dnf and len(stints) >= 2:
-            last = stints[-1]
-            prev = stints[-2]
-            if (
-                int(last.get("laps_count", 0) or 0) <= 1
-                and int(last.get("start_lap", 0) or 0) > 1
-                and int(prev.get("end_lap", 0) or 0) == int(last.get("start_lap", 0) or 0) - 1
-            ):
-                stints = stints[:-1]
-
-        drivers.append(
-            {
-                "driver": driver_name,
-                "team": result.get("team"),
-                "position": _safe_position(result.get("position")),
-                "status": result.get("status"),
-                "completed_laps": driver_limit if is_dnf else total_laps,
-                "stints": stints,
-            }
-        )
-
-    payload = {
-        "season": season,
-        "round": round_no,
-        "race": round_payload.get("race"),
-        "session": normalized_session,
-        "total_laps": total_laps,
-        "drivers": drivers,
-        "source": "jolpica+heuristic",
-        "notes": {
-            "compound": "Tyre compounds are estimated from stint lengths because OpenF1 data was unavailable for this request.",
-            "metrics": "Fastest/slowest/average/consistency/degradation are computed from available lap timing samples in each stint.",
-        },
-    }
+    payload = _empty_tyre_strategy_payload()
     TYRE_STRATEGY_CACHE[key] = payload
     return payload
 

@@ -1931,6 +1931,7 @@ function EngineeringPanel({ roundNo, season, race }) {
   const renderTyreStrategyTab = () => {
     const totalLaps = Math.max(1, Number(tyreStrategyData?.total_laps || 0));
     const selected = selectedTyreStint?.stint || null;
+    const hasSolidTyreStrategyData = (tyreStrategyData?.source || "") !== "unavailable" && (tyreStrategyData?.drivers?.length || 0) > 0;
 
     return (
       <div className="grid">
@@ -1971,7 +1972,7 @@ function EngineeringPanel({ roundNo, season, race }) {
           {tyreStrategyLoading ? <div className="small">Loading tyre strategy...</div> : null}
           {tyreStrategyError ? <div className="small">{tyreStrategyError}</div> : null}
 
-          {!tyreStrategyLoading && !tyreStrategyError ? (
+          {!tyreStrategyLoading && !tyreStrategyError && hasSolidTyreStrategyData ? (
             <div className="tyre-grid">
               {(tyreStrategyData?.drivers || []).map((driverRow) => (
                 <div className="tyre-row" key={driverRow.driver}>
@@ -2010,11 +2011,14 @@ function EngineeringPanel({ roundNo, season, race }) {
               ))}
             </div>
           ) : null}
+          {!tyreStrategyLoading && !tyreStrategyError && !hasSolidTyreStrategyData ? (
+            <div className="small">No solid tyre strategy data available yet.</div>
+          ) : null}
 
-          <p className="small">{tyreStrategyData?.notes?.compound || ""}</p>
+          {hasSolidTyreStrategyData ? <p className="small">{tyreStrategyData?.notes?.compound || ""}</p> : null}
         </div>
 
-        {selected ? (
+        {selected && hasSolidTyreStrategyData ? (
           <div className="tyre-stint-popup-backdrop" onClick={() => setSelectedTyreStint(null)}>
             <div className="tyre-stint-popup-card" onClick={(e) => e.stopPropagation()}>
               <button
