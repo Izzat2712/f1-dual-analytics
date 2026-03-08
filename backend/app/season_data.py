@@ -84,6 +84,13 @@ def map_driver(driver: dict) -> str:
     return f"{driver['givenName']} {driver['familyName']}"
 
 
+def parse_int(value: object, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def normalize_constructor_name(season: int, constructor_name: str | None) -> str | None:
     if not constructor_name:
         return constructor_name
@@ -320,12 +327,12 @@ def build_season_dataset(season: int) -> dict:
             race_points = float(res["points"])
             results.append(
                 {
-                    "position": int(res["position"]),
+                    "position": parse_int(res.get("position")),
                     "driver": driver_name,
                     "team": constructor_name,
                     "time": time_value,
                     "points": race_points,
-                    "grid": int(res["grid"]),
+                    "grid": parse_int(res.get("grid")),
                     "status": res["status"],
                 }
             )
@@ -339,7 +346,7 @@ def build_season_dataset(season: int) -> dict:
             for q in quali_payload.get("QualifyingResults", []):
                 qualifying.append(
                     {
-                        "position": int(q["position"]),
+                        "position": parse_int(q.get("position")),
                         "driver": map_driver(q["Driver"]),
                         "q1": q.get("Q1"),
                         "q2": q.get("Q2"),
@@ -357,7 +364,7 @@ def build_season_dataset(season: int) -> dict:
                 sprint_points = float(s["points"])
                 sprint.append(
                     {
-                        "position": int(s["position"]),
+                        "position": parse_int(s.get("position")),
                         "driver": driver_name,
                         "team": constructor_name,
                         "points": sprint_points,
@@ -373,7 +380,7 @@ def build_season_dataset(season: int) -> dict:
             sprint_qualifying = sorted(
                 [
                     {
-                        "position": int(s.get("grid", 0)),
+                        "position": parse_int(s.get("grid", 0)),
                         "driver": map_driver(s["Driver"]),
                         "team": normalize_constructor_name(season, s["Constructor"]["name"]),
                         "sq1": None,
@@ -423,20 +430,20 @@ def build_season_dataset(season: int) -> dict:
         "generated_from": "https://api.jolpi.ca/ergast/f1",
         "driver_standings": [
             {
-                "position": int(item["position"]),
+                "position": parse_int(item.get("position")),
                 "driver": map_driver(item["Driver"]),
                 "points": float(item["points"]),
-                "wins": int(item["wins"]),
+                "wins": parse_int(item.get("wins")),
                 "team": normalize_constructor_name(season, item["Constructors"][0]["name"]),
             }
             for item in final_driver_standings
         ],
         "constructor_standings": [
             {
-                "position": int(item["position"]),
+                "position": parse_int(item.get("position")),
                 "team": normalize_constructor_name(season, item["Constructor"]["name"]),
                 "points": float(item["points"]),
-                "wins": int(item["wins"]),
+                "wins": parse_int(item.get("wins")),
             }
             for item in final_constructor_standings
         ],

@@ -166,7 +166,7 @@ SEASON_CACHE: dict[int, dict] = {}
 SEASON_CACHE_MTIME_NS: dict[int, int | None] = {}
 POSITIONS_CACHE: dict[tuple[int, int, str], dict] = {}
 TYRE_STRATEGY_CACHE: dict[tuple[int, int], dict] = {}
-TYRE_STRATEGY_CACHE_VERSION = 8
+TYRE_STRATEGY_CACHE_VERSION = 9
 H2H_CACHE: dict[tuple[int, int, str, str, str], dict] = {}
 TELEMETRY_CATALOG_CACHE: dict[tuple[int, int, str], dict] = {}
 OPENF1_SESSIONS_CACHE: dict[tuple[int, str], list[dict]] = {}
@@ -555,6 +555,12 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
         except (TypeError, ValueError):
             return 999
 
+    def _normalize_compound_label(value: object) -> str:
+        compound = str(value or "").strip().upper()
+        if compound in {"", "UNKNOWN", "NONE", "NULL", "N/A", "NA"}:
+            return "UNKNOWN"
+        return compound
+
     def _compute_stint_metrics(
         stint_index: int,
         compound: str,
@@ -692,6 +698,21 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                     continue
                 stints_by_driver_number.setdefault(driver_number, []).append(stint)
 
+            openf1_pit_laps_by_driver_number: dict[int, list[int]] = {}
+            if normalized_session == "race":
+                for stop in fetch_openf1("pit", session_key=session_key):
+                    try:
+                        driver_number = int(stop.get("driver_number"))
+                        lap_number = int(stop.get("lap_number"))
+                    except (TypeError, ValueError):
+                        continue
+                    if lap_number <= 0:
+                        continue
+                    bucket = openf1_pit_laps_by_driver_number.setdefault(driver_number, [])
+                    bucket.append(lap_number)
+                for driver_number, laps in openf1_pit_laps_by_driver_number.items():
+                    openf1_pit_laps_by_driver_number[driver_number] = sorted(set(laps))
+
             raw_results = load_official_results_rows(season, round_no, normalized_session)
             driver_id_to_name: dict[str, str] = {}
             official_laps_by_driver: dict[str, int] = {}
@@ -796,6 +817,19 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                 else:
                     driver_limit = total_laps if total_laps > 0 else max(max_lap_from_times, max_lap_from_stints)
 
+                if non_starter:
+                    drivers.append(
+                        {
+                            "driver": driver_name,
+                            "team": result.get("team") or (team_by_number.get(driver_number) if driver_number is not None else None),
+                            "position": _safe_position(result.get("position")),
+                            "status": result.get("status"),
+                            "completed_laps": 0,
+                            "stints": [],
+                        }
+                    )
+                    continue
+
                 participated = not non_starter and (
                     official_completed_laps > 0 or max_lap_from_times > 0 or max_lap_from_stints > 0 or bool(raw_stints_all)
                 )
@@ -807,14 +841,14 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                 if early_dnf:
                     start_compound = "UNKNOWN"
                     for stint in raw_stints_all:
-                        compound = str(stint.get("compound", "")).strip().upper()
-                        if compound:
+                        compound = _normalize_compound_label(stint.get("compound"))
+                        if compound != "UNKNOWN":
                             start_compound = compound
                             break
                     if start_compound == "UNKNOWN":
                         for stint in raw_stints:
-                            compound = str(stint.get("compound", "")).strip().upper()
-                            if compound:
+                            compound = _normalize_compound_label(stint.get("compound"))
+                            if compound != "UNKNOWN":
                                 start_compound = compound
                                 break
                     stints = [_compute_stint_metrics(1, start_compound, 1, 1, lap_times)]
@@ -831,19 +865,26 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                             continue
                         if s <= start_lap:
                             if chosen is None or s >= chosen[0]:
-                                chosen = (s, str(item.get("compound", "")).strip().upper() or "UNKNOWN")
+                                chosen = (s, _normalize_compound_label(item.get("compound")))
                     if chosen is not None:
                         return chosen[1]
                     if raw_stints:
-                        return str(raw_stints[0].get("compound", "")).strip().upper() or "UNKNOWN"
+                        return _normalize_compound_label(raw_stints[0].get("compound"))
                     return "UNKNOWN"
 
                 def _initial_compound() -> str:
                     for item in raw_stints:
-                        compound = str(item.get("compound", "")).strip().upper()
-                        if compound:
+                        compound = _normalize_compound_label(item.get("compound"))
+                        if compound != "UNKNOWN":
                             return compound
                     return "UNKNOWN"
+
+                def _resolved_compound(raw_compound: str, start_lap: int, end_lap: int) -> str:
+                    compound = _normalize_compound_label(raw_compound)
+                    if compound != "UNKNOWN":
+                        return compound
+                    length_laps = max(1, end_lap - start_lap + 1)
+                    return estimate_compound_by_stint_length(length_laps)
 
                 def _compound_events_by_end() -> list[tuple[int, str, int]]:
                     events: list[tuple[int, str, int]] = []
@@ -859,7 +900,7 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                             stint_idx = int(item.get("stint_number", 0) or 0)
                         except (TypeError, ValueError):
                             stint_idx = 0
-                        compound = str(item.get("compound", "")).strip().upper() or "UNKNOWN"
+                        compound = _normalize_compound_label(item.get("compound"))
                         events.append((end_lap, compound, stint_idx))
                     events.sort(key=lambda it: (it[0], it[2]))
                     return events
@@ -868,8 +909,11 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                 normalized_ranges: list[tuple[int, str, int, int]] = []
                 if not early_dnf:
                     # Prefer official pit-stop boundaries for lap ranges; use OpenF1 for compound identity.
+                    boundary_source = pit_laps_by_driver.get(driver_name) or (
+                        openf1_pit_laps_by_driver_number.get(driver_number, []) if driver_number is not None else []
+                    )
                     pit_boundaries = sorted(
-                        lap for lap in (pit_laps_by_driver.get(driver_name) or [])
+                        lap for lap in (boundary_source or [])
                         if lap > 0 and (driver_limit <= 0 or lap < driver_limit)
                     )
                     if pit_boundaries and driver_limit > 0:
@@ -887,22 +931,9 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                         if start_lap <= driver_limit:
                             segments.append((stint_idx, start_lap, driver_limit))
 
-                        base_compound = _initial_compound()
-                        compounds = [base_compound for _ in segments]
-                        events = _compound_events_by_end()
-                        for end_lap, compound, _ in events:
-                            target_idx = None
-                            for idx, (_, _, seg_end) in enumerate(segments):
-                                if seg_end >= end_lap:
-                                    target_idx = idx
-                                    break
-                            if target_idx is None and segments:
-                                target_idx = len(segments) - 1
-                            if target_idx is not None:
-                                compounds[target_idx] = compound
-
-                        for idx, (stint_idx, seg_start, seg_end) in enumerate(segments):
-                            normalized_ranges.append((stint_idx, compounds[idx], seg_start, seg_end))
+                        for stint_idx, seg_start, seg_end in segments:
+                            compound = _resolved_compound(_compound_for_start_lap(seg_start), seg_start, seg_end)
+                            normalized_ranges.append((stint_idx, compound, seg_start, seg_end))
                     else:
                         for stint in raw_stints:
                             try:
@@ -948,8 +979,16 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                                 continue
 
                             if start_lap > cursor:
-                                normalized_ranges.append((len(normalized_ranges) + 1, "UNKNOWN", cursor, start_lap - 1))
-                            compound = str(stint.get("compound", "")).strip().upper() or "UNKNOWN"
+                                gap_end = start_lap - 1
+                                normalized_ranges.append(
+                                    (
+                                        len(normalized_ranges) + 1,
+                                        _resolved_compound("UNKNOWN", cursor, gap_end),
+                                        cursor,
+                                        gap_end,
+                                    )
+                                )
+                            compound = _resolved_compound(stint.get("compound"), start_lap, end_lap)
                             normalized_ranges.append((stint_index, compound, start_lap, end_lap))
                             cursor = end_lap + 1
 
@@ -958,7 +997,14 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                                 last_idx, last_cmp, last_start, _ = normalized_ranges[-1]
                                 normalized_ranges[-1] = (last_idx, last_cmp, last_start, driver_limit)
                             else:
-                                normalized_ranges.append((len(normalized_ranges) + 1, "UNKNOWN", cursor, driver_limit))
+                                normalized_ranges.append(
+                                    (
+                                        len(normalized_ranges) + 1,
+                                        _resolved_compound("UNKNOWN", cursor, driver_limit),
+                                        cursor,
+                                        driver_limit,
+                                    )
+                                )
 
                 for idx, compound, start_lap, end_lap in normalized_ranges:
                     stints.append(_compute_stint_metrics(idx, compound, start_lap, end_lap, lap_times))
@@ -1478,6 +1524,7 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
     raw_results = load_official_results_rows(season, round_no, normalized_session)
     lap_times_by_driver: dict[str, dict[int, float]] = {}
     max_lap_seen = 0
+    source = "unavailable"
     if normalized_session == "race":
         driver_id_to_name: dict[str, str] = {}
         for row in raw_results:
@@ -1489,6 +1536,15 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
         if driver_id_to_name:
             try:
                 lap_times_by_driver, max_lap_seen = load_lap_times_by_driver(season, round_no, driver_id_to_name)
+                if lap_times_by_driver:
+                    source = "jolpica"
+            except Exception:
+                lap_times_by_driver, max_lap_seen = {}, 0
+        if not lap_times_by_driver:
+            try:
+                lap_times_by_driver, max_lap_seen = load_openf1_lap_times_by_driver(season, round_payload, normalized_session)
+                if lap_times_by_driver:
+                    source = "openf1"
             except Exception:
                 lap_times_by_driver, max_lap_seen = {}, 0
 
@@ -1507,8 +1563,6 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
         }
         TELEMETRY_CATALOG_CACHE[cache_key] = payload
         return payload
-
-    source = "jolpica"
 
     drivers: list[dict] = []
     for row in rows:
@@ -2010,6 +2064,53 @@ def pick_openf1_session(season: int, round_payload: dict, session_name: str) -> 
         return (same_country + day_diff, abs((session_dt - race_dt).total_seconds()))
 
     return min(sessions, key=score)
+
+
+def load_openf1_lap_times_by_driver(
+    season: int,
+    round_payload: dict,
+    session_kind: str = "race",
+) -> tuple[dict[str, dict[int, float]], int]:
+    normalized_session = str(session_kind or "race").strip().lower()
+    if normalized_session not in {"race", "sprint"}:
+        normalized_session = "race"
+
+    openf1_session_name = "Sprint" if normalized_session == "sprint" else "Race"
+    openf1_session = pick_openf1_session(season, round_payload, openf1_session_name)
+    if not openf1_session or not openf1_session.get("session_key"):
+        return {}, 0
+
+    session_key = int(openf1_session["session_key"])
+    openf1_drivers = fetch_openf1("drivers", session_key=session_key)
+    name_by_number: dict[int, str] = {}
+    for item in openf1_drivers:
+        try:
+            driver_number = int(item.get("driver_number"))
+        except (TypeError, ValueError):
+            continue
+        full_name = str(item.get("full_name", "")).strip()
+        if full_name:
+            name_by_number[driver_number] = full_name.title() if full_name.isupper() else full_name
+
+    raw_laps = fetch_openf1("laps", session_key=session_key)
+    lap_times_by_driver: dict[str, dict[int, float]] = {}
+    max_lap_seen = 0
+    for row in raw_laps:
+        try:
+            driver_number = int(row.get("driver_number"))
+            lap_no = int(row.get("lap_number"))
+            lap_time_s = float(row.get("lap_duration"))
+        except (TypeError, ValueError):
+            continue
+        if lap_no <= 0 or lap_time_s <= 0:
+            continue
+        driver_name = name_by_number.get(driver_number)
+        if not driver_name:
+            continue
+        max_lap_seen = max(max_lap_seen, lap_no)
+        lap_times_by_driver.setdefault(driver_name, {})[lap_no] = lap_time_s
+
+    return lap_times_by_driver, max_lap_seen
 
 
 def warm_positions_for_season(season: int, rounds: list[int] | None = None) -> list[dict]:
