@@ -2340,6 +2340,22 @@ def _fallback_positions(round_payload: dict, season: int, round_no: int, session
     }
 
 
+def _empty_positions_payload(round_payload: dict, season: int, round_no: int, session_kind: str = "race") -> dict:
+    normalized_session = str(session_kind or "race").strip().lower()
+    if normalized_session not in {"race", "sprint"}:
+        normalized_session = "race"
+    return {
+        "season": season,
+        "round": round_no,
+        "race": round_payload.get("race"),
+        "session": normalized_session,
+        "drivers": [],
+        "laps": [],
+        "dnf_drivers": [],
+        "source": "unavailable",
+    }
+
+
 def build_round_positions(season: int, round_no: int, session_kind: str = "race") -> dict:
     normalized_session = str(session_kind or "race").strip().lower()
     if normalized_session not in {"race", "sprint"}:
@@ -2376,9 +2392,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
             driver_team_map.setdefault(result["driver"], result.get("team"))
 
         if normalized_session == "sprint":
-            fallback = _fallback_positions(round_payload, season, round_no, normalized_session)
-            POSITIONS_CACHE[key] = fallback
-            return fallback
+            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
 
         first_page = fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=100, offset=0)
         first_mr = first_page.get("MRData", {})
@@ -2417,9 +2431,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
 
         laps = [lap_map[n] for n in sorted(lap_map.keys())]
         if not laps:
-            fallback = _fallback_positions(round_payload, season, round_no, normalized_session)
-            POSITIONS_CACHE[key] = fallback
-            return fallback
+            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
 
         if target_laps > 0:
             normalized = []
@@ -2456,9 +2468,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
             rows.append(row)
 
         if not rows:
-            fallback = _fallback_positions(round_payload, season, round_no, normalized_session)
-            POSITIONS_CACHE[key] = fallback
-            return fallback
+            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
 
         grid_order = []
         for r in session_rows or []:
@@ -2512,10 +2522,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
         save_positions_to_disk(payload)
         return payload
     except Exception:
-        fallback = _fallback_positions(round_payload, season, round_no, normalized_session)
-        POSITIONS_CACHE[key] = fallback
-        # Do not persist synthetic fallback; allow future rebuild attempts.
-        return fallback
+        return _empty_positions_payload(round_payload, season, round_no, normalized_session)
 
 
 def build_engineering_telemetry(round_no: int, driver_result: dict) -> dict:

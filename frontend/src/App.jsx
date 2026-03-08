@@ -1502,6 +1502,7 @@ function EngineeringPanel({ roundNo, season, race }) {
   }, [positionsData]);
 
   const dnfDriversSet = useMemo(() => new Set(positionsData?.dnf_drivers || []), [positionsData]);
+  const hasSolidPositionsData = (positionsData?.source || "") !== "unavailable" && (positionsData?.laps?.length || 0) > 0;
 
   const lastSeenLapByDriver = useMemo(() => {
     const last = {};
@@ -1821,7 +1822,7 @@ function EngineeringPanel({ roundNo, season, race }) {
           <>
             {positionsLoading ? <div className="small">Loading lap positions...</div> : null}
             {positionsError ? <div className="small">{positionsError}</div> : null}
-            {!positionsLoading && !positionsError ? (
+            {!positionsLoading && !positionsError && hasSolidPositionsData ? (
               <div style={{ width: "100%", height: "680px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={positionsData?.laps || []}>
@@ -1870,15 +1871,20 @@ function EngineeringPanel({ roundNo, season, race }) {
                 </ResponsiveContainer>
               </div>
             ) : null}
+            {!positionsLoading && !positionsError && !hasSolidPositionsData ? (
+              <div className="small">No solid lap-by-lap position data available yet.</div>
+            ) : null}
 
-            <div className="position-driver-legend">
-              <span style={{ color: "#5e6773" }}>QUALIFYING RESULTS:</span>
-              {visiblePositionDrivers.map((name) => (
-                <span key={name} style={{ color: positionDriverColors[name] || "#111" }}>
-                  {dashedDriversSet.has(name) ? `${driverCode(name)} (dashed)` : driverCode(name)}
-                </span>
-              ))}
-            </div>
+            {hasSolidPositionsData ? (
+              <div className="position-driver-legend">
+                <span style={{ color: "#5e6773" }}>QUALIFYING RESULTS:</span>
+                {visiblePositionDrivers.map((name) => (
+                  <span key={name} style={{ color: positionDriverColors[name] || "#111" }}>
+                    {dashedDriversSet.has(name) ? `${driverCode(name)} (dashed)` : driverCode(name)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : (
           <div className="table-scroll card-table-wrap">
