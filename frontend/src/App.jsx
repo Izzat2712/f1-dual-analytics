@@ -2323,8 +2323,9 @@ function EngineeringPanel({ roundNo, season, race }) {
         const isCardLoading = Boolean(telemetryCardLoading?.[card.key]);
         const selectedDriverColor = telemetryDriverColors[driverName] || card.color;
         const sourceRaw = String(traceState?.payload?.source || "").toLowerCase();
-        const sourceLabel = sourceRaw === "openf1" ? "OPENF1" : (sourceRaw === "synthetic" ? "SYNTHETIC" : "N/A");
-        const sourceClass = sourceRaw === "openf1" ? "source-openf1" : (sourceRaw === "synthetic" ? "source-synthetic" : "source-na");
+        const sourceLabel = sourceRaw === "openf1" ? "OPENF1" : (sourceRaw === "jolpica" ? "JOLPICA" : "NO DATA");
+        const sourceClass = sourceRaw === "openf1" ? "source-openf1" : (sourceRaw === "jolpica" ? "source-na" : "source-na");
+        const hasTraceData = sourceRaw !== "unavailable" && traceSamples.length > 0;
         const centerClass = TELEMETRY_CARDS.length === 5 && idx >= 3
           ? (idx === 3 ? "telemetry-card-center-left" : "telemetry-card-center-right")
           : "";
@@ -2355,55 +2356,58 @@ function EngineeringPanel({ roundNo, season, race }) {
               </select>
             </div>
 
-            {traceState?.error ? <div className="small">{traceState.error}</div> : null}
+            {traceState?.error ? <div className="small">No data</div> : null}
             {!traceState && telemetryDriverNames.length && driverName ? <div className="small">Loading trace...</div> : null}
             {!driverName ? <div className="small">Choose driver to load telemetry.</div> : null}
+            {traceState && !traceState?.error && !hasTraceData ? <div className="small">No data</div> : null}
 
-            <div className="telemetry-chart-wrap" style={{ width: "100%", height: 230, marginTop: "0.45rem" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={traceSamples}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="distance_pct" tickFormatter={(value) => `${Math.round(Number(value))}%`} />
-                  <YAxis
-                    domain={
-                      card.dataKey === "gear" ? [1, 8]
-                        : card.dataKey === "drs" ? [0, 1]
-                        : card.dataKey === "throttle" || card.dataKey === "brake" ? [0, 100]
-                        : ["auto", "auto"]
-                    }
-                    allowDecimals={card.dataKey !== "gear" && card.dataKey !== "drs"}
-                  />
-                  <Tooltip
-                    formatter={(value) => {
-                      if (card.dataKey === "drs") {
-                        return Number(value) === 1 ? "ON" : "OFF";
+            {hasTraceData ? (
+              <div className="telemetry-chart-wrap" style={{ width: "100%", height: 230, marginTop: "0.45rem" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={traceSamples}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="distance_pct" tickFormatter={(value) => `${Math.round(Number(value))}%`} />
+                    <YAxis
+                      domain={
+                        card.dataKey === "gear" ? [1, 8]
+                          : card.dataKey === "drs" ? [0, 1]
+                          : card.dataKey === "throttle" || card.dataKey === "brake" ? [0, 100]
+                          : ["auto", "auto"]
                       }
-                      if (card.dataKey === "gear") {
-                        return `G${value}`;
-                      }
-                      if (card.unit) {
-                        return `${value} ${card.unit}`;
-                      }
-                      return value;
-                    }}
-                    labelFormatter={(value) => `Distance ${Math.round(Number(value))}%`}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey={card.dataKey}
-                    stroke={selectedDriverColor}
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              {isCardLoading ? (
-                <div className="telemetry-loading-overlay">
-                  <span>Loading telemetry...</span>
-                </div>
-              ) : null}
-            </div>
+                      allowDecimals={card.dataKey !== "gear" && card.dataKey !== "drs"}
+                    />
+                    <Tooltip
+                      formatter={(value) => {
+                        if (card.dataKey === "drs") {
+                          return Number(value) === 1 ? "ON" : "OFF";
+                        }
+                        if (card.dataKey === "gear") {
+                          return `G${value}`;
+                        }
+                        if (card.unit) {
+                          return `${value} ${card.unit}`;
+                        }
+                        return value;
+                      }}
+                      labelFormatter={(value) => `Distance ${Math.round(Number(value))}%`}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey={card.dataKey}
+                      stroke={selectedDriverColor}
+                      strokeWidth={2}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+                {isCardLoading ? (
+                  <div className="telemetry-loading-overlay">
+                    <span>Loading telemetry...</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <p className="small">Lap: {Number.isFinite(Number(selectedLap)) ? `L${selectedLap}` : "-"}</p>
             <p className="small">Min: {Number.isFinite(Number(stats?.min)) ? Number(stats.min).toFixed(2) : "-"} | Max: {Number.isFinite(Number(stats?.max)) ? Number(stats.max).toFixed(2) : "-"} | Avg: {Number.isFinite(Number(stats?.avg)) ? Number(stats.avg).toFixed(2) : "-"}</p>
           </div>
@@ -2414,146 +2418,9 @@ function EngineeringPanel({ roundNo, season, race }) {
 
   const renderWhatIfTab = () => (
     <div className="grid">
-      <div className="card">
-        <h3>Engineering View Controls</h3>
-        <div className="form-row">
-          <span className="small">Round: {roundNo}</span>
-          <span className="small">Driver:</span>
-          <select value={driver} onChange={(e) => setDriver(e.target.value)}>
-            {drivers.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <span className="small">Team: {analysis?.team || "-"}</span>
-          <span className="small">Finish Pos: {analysis?.race_result?.position || "-"}</span>
-          <span className="small">Teammate: {teammate || "-"}</span>
-        </div>
-        <div className="driver-portrait-wrap">
-          {driver ? <DriverPortrait driverName={driver} season={season} roundNo={roundNo} /> : null}
-        </div>
-      </div>
-
-      <div className="card info-card">
-        <div className="card-title-row">
-          <h3>Lap Time Prediction Engine</h3>
-          <InfoHint
-            label="About lap time prediction engine"
-            content="Uses a synthetic LinearRegression model with tyre compound, synthetic sector profile, tyre age, and track temperature. Output is an estimated lap time, not direct live telemetry fitting."
-          />
-        </div>
-        <div className="kpi">{analysis?.lap_prediction ? formatLapTimeSeconds(analysis.lap_prediction.predicted_lap_time_s) : "..."}</div>
-        <p className="small">Model: {analysis?.lap_prediction?.model || "-"}</p>
-        <p className="small">{analysis?.explanations?.lap_prediction || "-"}</p>
-      </div>
-
-      <div className="card" style={{ minHeight: 300 }}>
-        <h3>Telemetry Signal Analysis</h3>
-        <ResponsiveContainer width="100%" height={235}>
-          <LineChart data={telemetryGraph}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="idx" />
-            <YAxis />
-            <Tooltip />
-            <Line dataKey="speed" stroke="#d7263d" dot={false} />
-            <Line dataKey="throttle" stroke="#1f7a8c" dot={false} />
-            <Line dataKey="brake" stroke="#111" dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-        <p className="small">Max speed: {analysis?.telemetry?.summary?.max_speed ?? "-"} km/h</p>
-        <p className="small">DRS estimate: {analysis?.telemetry?.summary?.drs_usage_estimate_pct ?? "-"}%</p>
-        <p className="small">{analysis?.explanations?.telemetry || "-"}</p>
-      </div>
-
-      <div className="card">
-        <h3>Driver vs Teammate Delta</h3>
-        <p className="small">Avg speed delta: <strong>{telemetryDelta ? `${telemetryDelta.speed} km/h` : "-"}</strong></p>
-        <p className="small">DRS usage delta: <strong>{telemetryDelta ? `${telemetryDelta.drs}%` : "-"}</strong></p>
-        <p className="small">Predicted lap delta: <strong>{telemetryDelta ? `${telemetryDelta.lap}s` : "-"}</strong></p>
-        <p className="small">Negative lap delta means selected driver is faster than teammate.</p>
-      </div>
-
-      <div className="card info-card" style={{ minHeight: 280 }}>
-        <div className="card-title-row">
-          <h3>Sector Time Decomposition</h3>
-          <InfoHint
-            label="About sector time decomposition"
-            content="This chart splits predicted lap time into synthetic S1/S2/S3 percentages (33/40/27). It is for pace profiling, not measured sector timing."
-          />
-        </div>
-        <ResponsiveContainer width="100%" height={210}>
-          <BarChart data={sectorBreakdown}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="sector" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="time_s" fill={sectorBarColor} />
-          </BarChart>
-        </ResponsiveContainer>
-        <p className="small">Synthetic split of predicted lap time into S1/S2/S3 for quick pace profiling.</p>
-      </div>
-
-      <div className="card info-card">
-        <div className="card-title-row">
-          <h3>Race Engineer Radio</h3>
-          <InfoHint
-            label="About race engineer radio"
-            content="This is an autogenerated call built from network risk, best pit-lap recommendation, and teammate lap delta. It is a rules-based advisory, not live team radio."
-          />
-        </div>
-        <p className="small"><strong>Call:</strong> {engineerRadio?.call || "-"}</p>
-        <p className="small"><strong>Confidence:</strong> {engineerRadio?.confidence || "-"}</p>
-      </div>
-
-      <div className="card info-card" style={{ minHeight: 300 }}>
-        <div className="card-title-row">
-          <h3>Strategy Simulation (What-If)</h3>
-          <InfoHint
-            label="About strategy simulation"
-            content="Runs Monte Carlo simulations across the selected pit window. Total race time estimate combines base race time, tyre degradation trend, pit-stop delta, and traffic noise."
-          />
-        </div>
-        <div className="form-row">
-          <span className="small">Pit start</span>
-          <input type="number" min="1" max="55" value={strategyInput.pit_window_start} onChange={(e) => setStrategyInput((s) => ({ ...s, pit_window_start: Number(e.target.value) || 1 }))} />
-          <span className="small">Pit end</span>
-          <input type="number" min="2" max="57" value={strategyInput.pit_window_end} onChange={(e) => setStrategyInput((s) => ({ ...s, pit_window_end: Number(e.target.value) || 2 }))} />
-        </div>
-        <ResponsiveContainer width="100%" height={210}>
-          <BarChart data={strategyWhatIf?.candidates || analysis?.strategy?.candidates || []}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="pit_lap" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="avg_total_time_s" fill="#1f7a8c" />
-          </BarChart>
-        </ResponsiveContainer>
-        <p className="small">Best pit lap: {strategyWhatIf?.best_pit_lap ?? analysis?.strategy?.best_pit_lap ?? "-"}</p>
-        <p className="small">{analysis?.explanations?.strategy || "-"}</p>
-      </div>
-
-      <div className="card info-card" style={{ minHeight: 300 }}>
-        <div className="card-title-row">
-          <h3>Communication Network Simulation (What-If)</h3>
-          <InfoHint
-            label="About network simulation"
-            content="Simulates telemetry packet delivery with latency, jitter, packet loss, and bandwidth penalty. Higher average delay or loss increases strategy decision risk."
-          />
-        </div>
-        <div className="form-row">
-          <span className="small">Latency</span>
-          <input type="number" min="1" max="200" value={networkInput.base_latency_ms} onChange={(e) => setNetworkInput((s) => ({ ...s, base_latency_ms: Number(e.target.value) || 1 }))} />
-          <span className="small">Jitter</span>
-          <input type="number" min="0" max="100" value={networkInput.jitter_ms} onChange={(e) => setNetworkInput((s) => ({ ...s, jitter_ms: Number(e.target.value) || 0 }))} />
-          <span className="small">Loss</span>
-          <input type="number" min="0" max="0.5" step="0.005" value={networkInput.packet_loss_rate} onChange={(e) => setNetworkInput((s) => ({ ...s, packet_loss_rate: Number(e.target.value) || 0 }))} />
-        </div>
-        <p className="small">Avg Latency: <strong>{analysis?.network?.avg_latency_ms ?? "-"} ms</strong></p>
-        <p className="small">Jitter: <strong>{analysis?.network?.jitter_ms ?? "-"} ms</strong></p>
-        <p className="small">Packet Loss: <strong>{analysis?.network?.loss_pct ?? "-"}%</strong></p>
-        <p className="small">Decision Risk: <strong>{analysis?.network?.strategy_decision_risk ?? "-"}</strong></p>
-        <hr />
-        <p className="small">What-if Latency: <strong>{networkWhatIf?.avg_latency_ms ?? "-"} ms</strong></p>
-        <p className="small">What-if Loss: <strong>{networkWhatIf?.loss_pct ?? "-"}%</strong></p>
-        <p className="small">What-if Risk: <strong>{networkWhatIf?.strategy_decision_risk ?? "-"}</strong></p>
-        <p className="small">{analysis?.explanations?.network || "-"}</p>
+      <div className="card wide-card">
+        <h3>Race Engineer</h3>
+        <div className="small">No data</div>
       </div>
     </div>
   );

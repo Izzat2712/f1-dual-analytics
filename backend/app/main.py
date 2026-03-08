@@ -1482,7 +1482,20 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
     expected_total_laps = expected_lap_count(season, round_no, raw_results)
     fallback_laps = 24 if normalized_session == "sprint" else 57
     total_laps = max(1, expected_total_laps or max_lap_seen or fallback_laps)
-    source = "jolpica" if lap_times_by_driver else "synthetic"
+    if not lap_times_by_driver:
+        payload = {
+            "season": season,
+            "round": round_no,
+            "race": round_payload.get("race"),
+            "session": normalized_session,
+            "source": "unavailable",
+            "total_laps": 0,
+            "drivers": [],
+        }
+        TELEMETRY_CATALOG_CACHE[cache_key] = payload
+        return payload
+
+    source = "jolpica"
 
     drivers: list[dict] = []
     for row in rows:
@@ -1492,7 +1505,7 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
         lap_times = lap_times_by_driver.get(driver_name, {})
         available_laps = sorted(int(lap_no) for lap_no in lap_times.keys() if int(lap_no) > 0)
         if not available_laps:
-            available_laps = list(range(1, total_laps + 1))
+            continue
 
         fastest_lap = None
         if lap_times:
@@ -1502,18 +1515,6 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
                 "lap_time_s": round(float(fastest_time_s), 3),
                 "lap_time": format_lap_time(float(fastest_time_s)),
             }
-        elif available_laps:
-            try:
-                position = max(1, int(row.get("position", len(drivers) + 1)))
-            except (TypeError, ValueError):
-                position = len(drivers) + 1
-            estimated_fastest_lap = max(1, min(available_laps[-1], int((available_laps[-1] * 0.35) + (position % 7))))
-            fastest_lap = {
-                "lap": estimated_fastest_lap,
-                "lap_time_s": None,
-                "lap_time": None,
-            }
-
         drivers.append(
             {
                 "driver": driver_name,
@@ -2479,39 +2480,6 @@ def engineering_driver_analysis(payload: EngineeringDriverInput) -> dict:
     round_payload = get_round_payload(payload.season, payload.round_no)
     driver_result = get_driver_result(payload.season, payload.round_no, payload.driver)
 
-    telemetry = build_engineering_telemetry(payload.round_no, driver_result)
-
-    tyre_by_position = "SOFT" if int(driver_result["position"]) <= 6 else "MEDIUM"
-    lap_pred = predict_lap_time(
-        LapPredictionInput(
-            tyre_compound=tyre_by_position,
-            sector1=30.7 + int(driver_result["position"]) * 0.04,
-            sector2=36.9 + int(driver_result["position"]) * 0.05,
-            sector3=24.6 + int(driver_result["position"]) * 0.03,
-            tyre_age_laps=8 + int(driver_result["position"]) // 2,
-            track_temp_c=33.0 + (payload.round_no % 5),
-        )
-    )
-
-    strategy = strategy_simulation(
-        StrategyInput(
-            total_laps=57,
-            pit_window_start=13 + (payload.round_no % 3),
-            pit_window_end=31 + (payload.round_no % 2),
-            simulations=500,
-        )
-    )
-
-    network = network_simulation(
-        NetworkInput(
-            packets=160,
-            base_latency_ms=42 + int(driver_result["position"]) * 0.8 + (payload.round_no % 4),
-            jitter_ms=8 + int(driver_result["position"]) * 0.25,
-            packet_loss_rate=min(0.12, 0.02 + int(driver_result["position"]) * 0.002),
-            bandwidth_mbps=max(2.0, 4.8 - int(driver_result["position"]) * 0.1),
-        )
-    )
-
     return {
         "season": payload.season,
         "round": payload.round_no,
@@ -2524,15 +2492,16 @@ def engineering_driver_analysis(payload: EngineeringDriverInput) -> dict:
             "status": driver_result["status"],
             "grid": driver_result["grid"],
         },
-        "telemetry": telemetry,
-        "lap_prediction": lap_pred,
-        "strategy": strategy,
-        "network": network,
+        "source": "unavailable",
+        "telemetry": None,
+        "lap_prediction": None,
+        "strategy": None,
+        "network": None,
         "explanations": {
-            "telemetry": "Speed, throttle, and brake traces are estimated per driver and round. Better finishing position generally maps to stronger pace and smoother braking.",
-            "lap_prediction": "Predicted lap time is inferred from synthetic sector profile, tyre choice, tyre age, and track temperature calibrated by race result context.",
-            "strategy": "Monte Carlo simulation sweeps pit windows to estimate total race time distribution and recommend the most competitive pit lap.",
-            "network": "Telemetry link quality model estimates latency, jitter, and packet loss; higher delay and loss increase pit-wall decision risk.",
+            "telemetry": "No data",
+            "lap_prediction": "No data",
+            "strategy": "No data",
+            "network": "No data",
         },
     }
 
@@ -2642,27 +2611,34 @@ def engineering_round_telemetry_trace(
         fastest_lap_payload = openf1_trace.get("fastest_lap")
         source = "openf1"
     else:
-        notes.append("OpenF1 telemetry unavailable for this selection. Falling back to synthetic telemetry.")
-        selected_lap: int | None = None
-        if requested_lap in {"fastest", "fast"}:
-            selected_lap = int((driver_entry.get("fastest_lap") or {}).get("lap") or 0)
-        else:
-            selected_lap = int(lap)
-
-        if selected_lap not in available_laps:
-            raise HTTPException(status_code=404, detail="Selected lap is not available for this driver.")
-
-        samples = _build_synthetic_telemetry_trace(
-            season=season,
-            round_no=round_no,
-            driver_name=resolved_driver,
-            driver_position=int(driver_entry.get("position") or 1),
-            lap_no=selected_lap,
-            total_laps=int(catalog.get("total_laps") or max(available_laps)),
-        )
-        response_available_laps = available_laps
-        fastest_lap_payload = driver_entry.get("fastest_lap")
-        source = "synthetic"
+        return {
+            "season": season,
+            "round": round_no,
+            "race": catalog.get("race"),
+            "session": catalog.get("session"),
+            "source": "unavailable",
+            "notes": [],
+            "driver": {
+                "name": resolved_driver,
+                "team": driver_entry.get("team"),
+                "position": driver_entry.get("position"),
+            },
+            "lap": {
+                "requested": lap,
+                "selected": None,
+                "fastest_lap": driver_entry.get("fastest_lap"),
+                "available_laps": available_laps,
+            },
+            "stats": {
+                "speed": {"min": None, "max": None, "avg": None},
+                "gear": {"min": None, "max": None, "avg": None},
+                "throttle": {"min": None, "max": None, "avg": None},
+                "brake": {"min": None, "max": None, "avg": None},
+                "rpm": {"min": None, "max": None, "avg": None},
+                "drs": {"min": None, "max": None, "avg": None},
+            },
+            "samples": [],
+        }
 
     def _metric_stats(key: str) -> dict:
         values = [float(item.get(key)) for item in samples if isinstance(item.get(key), (int, float))]
@@ -2706,112 +2682,44 @@ def engineering_round_telemetry_trace(
 
 @app.post("/api/engineering/telemetry/analyze")
 def telemetry_analyze(payload: TelemetryPayload) -> dict:
-    speed_smooth = moving_average(payload.speed, payload.window)
-    throttle_smooth = moving_average(payload.throttle, payload.window)
-    brake_smooth = moving_average(payload.brake, payload.window)
-
-    drs_usage_pct = 0.0
-    if payload.throttle:
-        drs_usage_pct = sum(1 for x in payload.throttle if x > 95) / len(payload.throttle) * 100
-
     return {
-        "smoothed": {
-            "speed": speed_smooth,
-            "throttle": throttle_smooth,
-            "brake": brake_smooth,
-        },
-        "summary": {
-            "max_speed": max(payload.speed) if payload.speed else 0,
-            "avg_speed": float(np.mean(payload.speed)) if payload.speed else 0,
-            "drs_usage_estimate_pct": round(drs_usage_pct, 2),
-        },
+        "source": "unavailable",
+        "smoothed": None,
+        "summary": None,
     }
 
 
 @app.post("/api/engineering/lap/predict")
 def predict_lap_time(features: LapPredictionInput) -> dict:
-    compound_map = {"SOFT": 0, "MEDIUM": 1, "HARD": 2}
-    x = np.array([
-        [
-            compound_map[features.tyre_compound],
-            features.sector1,
-            features.sector2,
-            features.sector3,
-            features.tyre_age_laps,
-            features.track_temp_c,
-        ]
-    ])
-    pred = model.predict(x)[0]
-
     return {
-        "predicted_lap_time_s": round(float(pred), 3),
+        "source": "unavailable",
+        "predicted_lap_time_s": None,
         "input": features.model_dump(),
-        "model": "LinearRegression-v1",
+        "model": None,
     }
 
 
 @app.post("/api/engineering/strategy/simulate")
 def strategy_simulation(payload: StrategyInput) -> dict:
-    rng = np.random.default_rng(22)
-    outcomes = []
-
-    for _ in range(payload.simulations):
-        pit_lap = int(rng.integers(payload.pit_window_start, payload.pit_window_end + 1))
-        base = 5400.0
-        tyre_deg = pit_lap * 0.12 + (payload.total_laps - pit_lap) * 0.08
-        traffic = rng.normal(0, 2.5)
-        pit_delta = rng.normal(20.5, 1.2)
-        total = base + tyre_deg + pit_delta + traffic
-        outcomes.append((pit_lap, total))
-
-    by_lap: dict[int, list[float]] = {}
-    for lap, time_s in outcomes:
-        by_lap.setdefault(lap, []).append(time_s)
-
-    avg_by_lap = [{"pit_lap": lap, "avg_total_time_s": float(np.mean(times))} for lap, times in by_lap.items()]
-    avg_by_lap.sort(key=lambda x: x["avg_total_time_s"])
-    best = avg_by_lap[0]
-
     return {
-        "best_pit_lap": best["pit_lap"],
-        "best_avg_total_time_s": round(best["avg_total_time_s"], 3),
-        "candidates": avg_by_lap[:10],
+        "source": "unavailable",
+        "best_pit_lap": None,
+        "best_avg_total_time_s": None,
+        "candidates": [],
     }
 
 
 @app.post("/api/engineering/network/simulate")
 def network_simulation(payload: NetworkInput) -> dict:
-    rng = np.random.default_rng(5)
-    latencies = []
-    lost = 0
-
-    for _ in range(payload.packets):
-        if rng.random() < payload.packet_loss_rate:
-            lost += 1
-            continue
-        sample = max(0.0, rng.normal(payload.base_latency_ms, payload.jitter_ms))
-        bandwidth_penalty = 15.0 / max(payload.bandwidth_mbps, 0.1)
-        latencies.append(sample + bandwidth_penalty)
-
-    received = len(latencies)
-    jitter = float(np.std(latencies)) if latencies else 0.0
-    avg = float(np.mean(latencies)) if latencies else 0.0
-    p95 = float(np.percentile(latencies, 95)) if latencies else 0.0
-
-    strategy_risk = "LOW"
-    if avg > 90 or (lost / max(payload.packets, 1)) > 0.08:
-        strategy_risk = "HIGH"
-    elif avg > 65 or (lost / max(payload.packets, 1)) > 0.04:
-        strategy_risk = "MEDIUM"
-
     return {
+        "source": "unavailable",
         "sent": payload.packets,
-        "received": received,
-        "loss_pct": round((lost / max(payload.packets, 1)) * 100, 2),
-        "avg_latency_ms": round(avg, 2),
-        "jitter_ms": round(jitter, 2),
-        "p95_latency_ms": round(p95, 2),
-        "strategy_decision_risk": strategy_risk,
+        "received": None,
+        "loss_pct": None,
+        "avg_latency_ms": None,
+        "jitter_ms": None,
+        "p95_latency_ms": None,
+        "strategy_decision_risk": None,
     }
 
 
