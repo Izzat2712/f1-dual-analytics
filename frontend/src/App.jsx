@@ -358,6 +358,28 @@ function parseSessionTimestamp(startUtc) {
   return Number.isFinite(ts) ? ts : null;
 }
 
+function getAutoRoundFromSchedule(scheduleRounds, nowMs) {
+  const rounds = Array.isArray(scheduleRounds) ? scheduleRounds : [];
+  const eligibleRounds = rounds
+    .map((round) => {
+      const fp1 = (round?.session_schedule || []).find((entry) => String(entry?.code || "") === "practice_1");
+      const ts = parseSessionTimestamp(fp1?.start_utc);
+      if (!Number.isFinite(ts)) return null;
+      return {
+        round: Number(round?.round || 0),
+        fp1Ts: ts,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.round - b.round);
+
+  const startedRounds = eligibleRounds.filter((round) => round.fp1Ts <= nowMs);
+  if (startedRounds.length > 0) {
+    return startedRounds[startedRounds.length - 1]?.round || 1;
+  }
+  return eligibleRounds[0]?.round || 1;
+}
+
 const COUNTRY_TO_ISO2 = {
   "Australia": "AU",
   "China": "CN",
@@ -2359,16 +2381,22 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    const nowMs = Date.now();
     getCasualOverview(season).then((data) => {
       if (cancelled) return;
       setOverview(data);
-      if (data?.rounds_count && data.rounds_count >= 1) {
-        setRoundNo(1);
-      }
     });
     getRoundsSummary(season).then((payload) => {
       if (cancelled) return;
       setRoundsSummary(payload?.rounds || []);
+    });
+    getSessionSchedule(season).then((payload) => {
+      if (cancelled) return;
+      const rounds = Array.isArray(payload?.rounds) ? payload.rounds : [];
+      setRoundNo(getAutoRoundFromSchedule(rounds, nowMs));
+    }).catch(() => {
+      if (cancelled) return;
+      setRoundNo(1);
     });
     return () => {
       cancelled = true;
