@@ -399,8 +399,6 @@ def save_positions_to_disk(payload: dict) -> None:
     target = positions_cache_file(season, round_no, session_kind)
     stored = {**payload, "cache_version": POSITIONS_CACHE_VERSION}
     target.write_text(json.dumps(stored, separators=(",", ":")), encoding="utf-8")
-
-
 def expected_lap_count(season: int, round_no: int, raw_results: list[dict] | None = None) -> int:
     override = LAPS_OVERRIDE_BY_SEASON_ROUND.get((season, round_no))
     if override is not None:
@@ -2500,9 +2498,6 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
                 row[driver_name] = position
                 max_position = max(max_position, position)
             rows.append(row)
-
-        if not rows:
-            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
 
         grid_order = []
         for r in session_rows or []:

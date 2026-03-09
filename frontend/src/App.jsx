@@ -1371,7 +1371,14 @@ function EngineeringPanel({ roundNo, season, race }) {
   }, [positionsData]);
 
   const dnfDriversSet = useMemo(() => new Set(positionsData?.dnf_drivers || []), [positionsData]);
-  const hasSolidPositionsData = (positionsData?.source || "") !== "unavailable" && (positionsData?.laps?.length || 0) > 0;
+  const hasSolidPositionsData = useMemo(() => {
+    if ((positionsData?.source || "") === "unavailable") return false;
+    const laps = positionsData?.laps || [];
+    if (!laps.length || !positionDrivers.length) return false;
+    return laps.some((row) => (
+      Number(row?.lap) > 0 && positionDrivers.some((driver) => Number.isFinite(Number(row?.[driver])))
+    ));
+  }, [positionsData, positionDrivers]);
 
   const lastSeenLapByDriver = useMemo(() => {
     const last = {};
@@ -1617,9 +1624,22 @@ function EngineeringPanel({ roundNo, season, race }) {
   const selectAllPositionDrivers = () => setSelectedPositionDrivers(positionDrivers);
   const clearAllPositionDrivers = () => setSelectedPositionDrivers([]);
 
-  const renderPositionsTab = () => (
-    <div className="grid">
-      <div className="card wide-card">
+  const showPositionsLapByLapUi = positionsViewTab === "lap_by_lap" && !positionsLoading && !positionsError && hasSolidPositionsData;
+
+  const renderPositionsTab = () => {
+    if (positionsViewTab === "lap_by_lap" && !positionsLoading && !positionsError && !hasSolidPositionsData) {
+      return (
+        <div className="grid">
+          <div className="card wide-card">
+            <div className="small">No data.</div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid">
+        <div className="card wide-card">
         <div className="positions-head">
           <div>
             <h3>Positions</h3>
@@ -1659,7 +1679,7 @@ function EngineeringPanel({ roundNo, season, race }) {
               </button>
             </div>
           </div>
-          {positionsViewTab === "lap_by_lap" ? (
+          {showPositionsLapByLapUi ? (
             <details className="position-selector">
               <summary>{visiblePositionDrivers.length ? `${visiblePositionDrivers.length} Drivers` : "No Drivers"}</summary>
               <div className="position-selector-menu">
@@ -1691,7 +1711,7 @@ function EngineeringPanel({ roundNo, season, race }) {
           <>
             {positionsLoading ? <div className="small">Loading lap positions...</div> : null}
             {positionsError ? <div className="small">{positionsError}</div> : null}
-            {!positionsLoading && !positionsError && hasSolidPositionsData ? (
+            {showPositionsLapByLapUi ? (
               <div style={{ width: "100%", height: "680px" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={positionsData?.laps || []}>
@@ -1741,10 +1761,10 @@ function EngineeringPanel({ roundNo, season, race }) {
               </div>
             ) : null}
             {!positionsLoading && !positionsError && !hasSolidPositionsData ? (
-              <div className="small">No solid lap-by-lap position data available yet.</div>
+              <div className="small">No data.</div>
             ) : null}
 
-            {hasSolidPositionsData ? (
+            {showPositionsLapByLapUi ? (
               <div className="position-driver-legend">
                 <span style={{ color: "#5e6773" }}>QUALIFYING RESULTS:</span>
                 {visiblePositionDrivers.map((name) => (
@@ -1793,9 +1813,10 @@ function EngineeringPanel({ roundNo, season, race }) {
             </table>
           </div>
         )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderTyreStrategyTab = () => {
     const totalLaps = Math.max(1, Number(tyreStrategyData?.total_laps || 0));
