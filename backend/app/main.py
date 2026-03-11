@@ -173,7 +173,7 @@ OPENF1_SESSIONS_CACHE: dict[tuple[int, str], list[dict]] = {}
 ROUND_SESSION_SCHEDULE_CACHE: dict[tuple[int, int], list[dict]] = {}
 SEASON_SESSION_SCHEDULE_CACHE: dict[int, list[dict]] = {}
 POSITIONS_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "positions_cache"
-POSITIONS_CACHE_VERSION = 5
+POSITIONS_CACHE_VERSION = 11
 
 
 def get_season_cache_mtime_ns(season: int) -> int | None:
@@ -430,6 +430,80 @@ def parse_lap_time_to_seconds(raw: str | None) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def normalize_driver_name_key(name: str | None) -> str:
+    normalized = unicodedata.normalize("NFKD", str(name or "").strip())
+    ascii_only = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return " ".join(ascii_only.casefold().split())
+
+
+def resolve_canonical_driver_name(name: str | None, canonical_names: dict[str, str]) -> str | None:
+    normalized_name = normalize_driver_name_key(name)
+    if not normalized_name:
+        return None
+    direct = canonical_names.get(normalized_name)
+    if direct:
+        return direct
+
+    name_tokens = set(normalized_name.split())
+    candidates = []
+    for canonical_key, canonical_name in canonical_names.items():
+        canonical_tokens = set(canonical_key.split())
+        if canonical_tokens and (canonical_tokens <= name_tokens or name_tokens <= canonical_tokens):
+            candidates.append(canonical_name)
+
+    if len(candidates) == 1:
+        return candidates[0]
+    return str(name) if name else None
+
+
+def canonicalize_position_rows(
+    rows: list[dict],
+    canonical_names: dict[str, str],
+) -> list[dict]:
+    normalized_rows: list[dict] = []
+    for row in rows:
+        normalized_row = {"lap": row.get("lap")}
+        for key, value in row.items():
+            if key == "lap":
+                continue
+            canonical_key = resolve_canonical_driver_name(key, canonical_names) or key
+            normalized_row[canonical_key] = value
+        normalized_rows.append(normalized_row)
+    return normalized_rows
+
+
+def reconstruct_positions_from_lap_times(
+    lap_timings: dict[int, dict[str, float]],
+    target_laps: int,
+) -> list[dict]:
+    cumulative_times: dict[str, float] = {}
+    completed_laps: dict[str, int] = {}
+    rows: list[dict] = []
+
+    for lap_no in range(1, target_laps + 1):
+        for driver_name, lap_time_s in lap_timings.get(lap_no, {}).items():
+            cumulative_times[driver_name] = cumulative_times.get(driver_name, 0.0) + lap_time_s
+            completed_laps[driver_name] = lap_no
+
+        ranked = sorted(
+            (
+                driver_name
+                for driver_name, completed_lap in completed_laps.items()
+                if completed_lap == lap_no
+            ),
+            key=lambda driver_name: (
+                cumulative_times.get(driver_name, float("inf")),
+                driver_name,
+            ),
+        )
+        row = {"lap": lap_no}
+        for position, driver_name in enumerate(ranked, start=1):
+            row[driver_name] = position
+        rows.append(row)
+
+    return rows
 
 
 def format_lap_time(seconds: float | None) -> str | None:
@@ -2411,10 +2485,18 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
 
         driver_id_to_name: dict[str, str] = {}
         driver_team_map: dict[str, str] = {}
+        session_driver_names = {
+            normalize_driver_name_key(row.get("driver")): row.get("driver")
+            for row in session_rows or []
+            if row.get("driver")
+        }
         for row in raw_results:
             driver = row.get("Driver", {})
             driver_id = driver.get("driverId")
             driver_name = map_driver(driver) if driver else None
+            session_name = resolve_canonical_driver_name(driver_name, session_driver_names)
+            if session_name:
+                driver_name = session_name
             if driver_id and driver_name:
                 driver_id_to_name[driver_id] = driver_name
             if driver_name:
@@ -2440,6 +2522,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
             all_pages.append(fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=limit_rows, offset=offset))
 
         lap_map: dict[int, dict] = {}
+        lap_timing_seconds: dict[int, dict[str, float]] = {}
         for page in all_pages:
             page_races = page.get("MRData", {}).get("RaceTable", {}).get("Races", [])
             page_payload = page_races[0] if page_races else {}
@@ -2451,10 +2534,14 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
                 if lap_no <= 0:
                     continue
                 lap_row = lap_map.setdefault(lap_no, {"lap": lap_no})
+                timing_row = lap_timing_seconds.setdefault(lap_no, {})
                 for timing in lap.get("Timings", []):
                     driver_name = driver_id_to_name.get(timing.get("driverId", ""))
                     if not driver_name:
                         continue
+                    lap_time_s = parse_lap_time_to_seconds(timing.get("time"))
+                    if lap_time_s is not None:
+                        timing_row[driver_name] = lap_time_s
                     try:
                         position = int(timing.get("position"))
                     except (TypeError, ValueError):
@@ -2488,6 +2575,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
 
         rows: list[dict] = []
         max_position = 0
+        parsed_any_positions = False
         for lap in laps:
             row = {"lap": int(lap["lap"])}
             for driver_name, position in lap.items():
@@ -2495,9 +2583,20 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
                     continue
                 if not isinstance(position, int):
                     continue
+                parsed_any_positions = True
                 row[driver_name] = position
                 max_position = max(max_position, position)
             rows.append(row)
+
+        if not parsed_any_positions and target_laps > 0:
+            rows = reconstruct_positions_from_lap_times(lap_timing_seconds, target_laps)
+            for row in rows:
+                for driver_name, position in row.items():
+                    if driver_name == "lap" or not isinstance(position, int):
+                        continue
+                    max_position = max(max_position, position)
+
+        rows = canonicalize_position_rows(rows, session_driver_names)
 
         grid_order = []
         for r in session_rows or []:

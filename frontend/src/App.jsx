@@ -445,6 +445,47 @@ function formatCountdownSessionLabel(label) {
   return raw.replace(/^Practice(\s+\d+)?$/i, (_, num = "") => `Free Practice${num}`);
 }
 
+function isCompletedRoundSummary(summary) {
+  if (!summary) return false;
+  return Boolean(summary.winner || summary.fastest_lap_driver || summary.pole);
+}
+
+function buildVisibleProgressionRows(rows, latestCompletedRound, keys) {
+  const sourceRows = Array.isArray(rows) ? rows : [];
+  const safeLatestRound = Number(latestCompletedRound);
+  const filteredRows = sourceRows.filter((row) => {
+    const round = Number(row?.round);
+    return Number.isFinite(round) && round > 0 && round <= safeLatestRound;
+  });
+
+  return filteredRows.map((row) => {
+    const nextRow = { round: Number(row.round) };
+    for (const key of keys || []) {
+      const value = Number(row?.[key]);
+      nextRow[key] = Number.isFinite(value) ? value : null;
+    }
+    return nextRow;
+  });
+}
+
+function getProgressionAxisMax(rows, keys) {
+  let maxValue = 0;
+  for (const row of rows || []) {
+    for (const key of keys || []) {
+      const value = Number(row?.[key]);
+      if (Number.isFinite(value)) {
+        maxValue = Math.max(maxValue, value);
+      }
+    }
+  }
+
+  if (maxValue <= 0) return 5;
+  if (maxValue <= 25) return 30;
+  if (maxValue <= 50) return 60;
+  if (maxValue <= 100) return Math.ceil(maxValue / 10) * 10;
+  return Math.ceil(maxValue / 25) * 25;
+}
+
 function NextSessionCountdown() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [scheduleRounds, setScheduleRounds] = useState([]);
@@ -552,7 +593,35 @@ function NextSessionCountdown() {
   );
 }
 
-function ProgressionTooltip({ active, label, payload }) {
+function formatProgressionRoundLabel(round, roundMetaByRound) {
+  const numericRound = Number(round);
+  const meta = roundMetaByRound?.[numericRound] || null;
+  const raceName = meta?.raceName || "Grand Prix";
+  return `Round ${numericRound}: ${raceName}`;
+}
+
+function ProgressionTooltipHeader({ round, roundMetaByRound }) {
+  const numericRound = Number(round);
+  const meta = roundMetaByRound?.[numericRound] || null;
+  const iso2 = meta?.iso2 || "";
+  const country = meta?.country || "";
+
+  return (
+    <div style={{ marginBottom: "0.3rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.4rem", color: "#111827" }}>
+      <span style={{ color: "#111827" }}>{formatProgressionRoundLabel(round, roundMetaByRound)}</span>
+      {iso2 ? (
+        <img
+          src={`https://flagcdn.com/w40/${iso2.toLowerCase()}.png`}
+          alt={`${country} flag`}
+          style={{ width: 20, height: 14, borderRadius: 2, objectFit: "cover", boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}
+          loading="lazy"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ProgressionTooltip({ active, label, payload, roundMetaByRound }) {
   if (!active || !payload?.length) return null;
 
   const sorted = payload
@@ -573,7 +642,7 @@ function ProgressionTooltip({ active, label, payload }) {
 
   return (
     <div style={{ background: "#f3f5f8", border: "1px solid #b9c2cd", padding: "0.45rem 0.55rem", minWidth: 380 }}>
-      <div style={{ marginBottom: "0.3rem", fontWeight: 700 }}>{label}</div>
+      <ProgressionTooltipHeader round={label} roundMetaByRound={roundMetaByRound} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 14px" }}>
         {orderedForTwoCols.map((item) => (
           <div key={item.name} style={{ color: item.color || "#111", lineHeight: 1.2, fontSize: "0.82rem", whiteSpace: "nowrap" }}>
@@ -585,7 +654,7 @@ function ProgressionTooltip({ active, label, payload }) {
   );
 }
 
-function ConstructorProgressionTooltip({ active, label, payload }) {
+function ConstructorProgressionTooltip({ active, label, payload, roundMetaByRound }) {
   if (!active || !payload?.length) return null;
 
   const sorted = payload
@@ -606,7 +675,7 @@ function ConstructorProgressionTooltip({ active, label, payload }) {
 
   return (
     <div style={{ background: "#f3f5f8", border: "1px solid #b9c2cd", padding: "0.45rem 0.55rem", minWidth: 340 }}>
-      <div style={{ marginBottom: "0.3rem", fontWeight: 700 }}>{label}</div>
+      <ProgressionTooltipHeader round={label} roundMetaByRound={roundMetaByRound} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 14px" }}>
         {orderedForTwoCols.map((item) => (
           <div key={item.name} style={{ color: item.color || "#111", lineHeight: 1.2, fontSize: "0.82rem", whiteSpace: "nowrap" }}>
@@ -672,6 +741,37 @@ function PositionTooltip({
   );
 }
 
+function RoundFlagTick({ x, y, payload, roundMetaByRound }) {
+  const round = Number(payload?.value);
+  const meta = roundMetaByRound?.[round] || null;
+  const iso2 = meta?.iso2 || "";
+  const country = meta?.country || `Round ${round}`;
+
+  if (!iso2) {
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text x={0} y={16} textAnchor="middle" fill="#c4d0e5" fontSize="12">
+          {round}
+        </text>
+      </g>
+    );
+  }
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <image
+        href={`https://flagcdn.com/w40/${iso2.toLowerCase()}.png`}
+        x={-10}
+        y={6}
+        width={20}
+        height={14}
+        preserveAspectRatio="xMidYMid slice"
+      />
+      <title>{country}</title>
+    </g>
+  );
+}
+
 function InfoHint({ label, content }) {
   return (
     <button type="button" className="info-icon-btn" aria-label={label}>
@@ -688,6 +788,8 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const isSprintWeekend = (race?.sprint_qualifying?.length || 0) > 0;
   const [sprintSessionTab, setSprintSessionTab] = useState("results");
   const [raceSessionTab, setRaceSessionTab] = useState("results");
+  const [selectedProgressionDrivers, setSelectedProgressionDrivers] = useState([]);
+  const [selectedProgressionConstructors, setSelectedProgressionConstructors] = useState([]);
   const driverTeamMap = useMemo(() => {
     const map = {};
     for (const item of overview?.driver_standings || []) {
@@ -695,11 +797,96 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     }
     return map;
   }, [overview]);
+  const latestCompletedRound = useMemo(() => {
+    const completedRounds = (roundsSummary || [])
+      .filter((item) => isCompletedRoundSummary(item))
+      .map((item) => Number(item?.round))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    return completedRounds.length ? Math.max(...completedRounds) : 0;
+  }, [roundsSummary]);
+  const visibleDriverProgression = useMemo(
+    () => buildVisibleProgressionRows(overview?.points_progression, latestCompletedRound, progressionDrivers),
+    [overview, latestCompletedRound, progressionDrivers]
+  );
+  const visibleConstructorProgression = useMemo(
+    () => buildVisibleProgressionRows(overview?.constructor_points_progression, latestCompletedRound, progressionConstructors),
+    [overview, latestCompletedRound, progressionConstructors]
+  );
+  const roundMetaByRound = useMemo(() => {
+    const map = {};
+    for (const item of roundsSummary || []) {
+      const round = Number(item?.round);
+      if (!Number.isFinite(round) || round <= 0) continue;
+      const country = item?.country || "";
+      map[round] = {
+        country,
+        iso2: countryToIso2(country),
+        flag: countryToFlagEmoji(country),
+        raceName: item?.race_name || "Grand Prix",
+      };
+    }
+    return map;
+  }, [roundsSummary]);
+  const allSeasonRounds = useMemo(
+    () => Object.keys(roundMetaByRound)
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => a - b),
+    [roundMetaByRound]
+  );
+  const finalSeasonRound = allSeasonRounds.length ? allSeasonRounds[allSeasonRounds.length - 1] : Math.max(latestCompletedRound, 1);
+  const driverProgressionAxisMax = useMemo(
+    () => getProgressionAxisMax(visibleDriverProgression, progressionDrivers),
+    [visibleDriverProgression, progressionDrivers]
+  );
+  const constructorProgressionAxisMax = useMemo(
+    () => getProgressionAxisMax(visibleConstructorProgression, progressionConstructors),
+    [visibleConstructorProgression, progressionConstructors]
+  );
+  const showDriverProgressionDots = visibleDriverProgression.length <= 2;
+  const showConstructorProgressionDots = visibleConstructorProgression.length <= 2;
+  const visibleProgressionDrivers = useMemo(() => {
+    const selected = new Set(selectedProgressionDrivers);
+    return progressionDrivers.filter((driver) => selected.has(driver));
+  }, [progressionDrivers, selectedProgressionDrivers]);
+  const visibleProgressionConstructors = useMemo(() => {
+    const selected = new Set(selectedProgressionConstructors);
+    return progressionConstructors.filter((team) => selected.has(team));
+  }, [progressionConstructors, selectedProgressionConstructors]);
 
   useEffect(() => {
     setSprintSessionTab("results");
     setRaceSessionTab("results");
   }, [roundNo, race?.race]);
+
+  useEffect(() => {
+    setSelectedProgressionDrivers(progressionDrivers);
+  }, [progressionDrivers]);
+
+  useEffect(() => {
+    setSelectedProgressionConstructors(progressionConstructors);
+  }, [progressionConstructors]);
+
+  const toggleProgressionDriver = (driver) => {
+    setSelectedProgressionDrivers((current) => (
+      current.includes(driver)
+        ? current.filter((item) => item !== driver)
+        : [...current, driver]
+    ));
+  };
+
+  const toggleProgressionConstructor = (team) => {
+    setSelectedProgressionConstructors((current) => (
+      current.includes(team)
+        ? current.filter((item) => item !== team)
+        : [...current, team]
+    ));
+  };
+
+  const selectAllProgressionDrivers = () => setSelectedProgressionDrivers(progressionDrivers);
+  const clearAllProgressionDrivers = () => setSelectedProgressionDrivers([]);
+  const selectAllProgressionConstructors = () => setSelectedProgressionConstructors(progressionConstructors);
+  const clearAllProgressionConstructors = () => setSelectedProgressionConstructors([]);
 
   return (
     <div className="casual-layout">
@@ -940,22 +1127,60 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
       </div>
 
       <div className="card progression-card">
-        <h3>All Drivers Points Progression ({overview?.season || 2025})</h3>
-        <div className="small">Every driver line is shown. Hover to compare round-by-round points.</div>
+        <div className="positions-head">
+          <div>
+            <h3>All Drivers Points Progression ({overview?.season || 2025})</h3>
+            <div className="small">Filter drivers, hover to compare round-by-round points.</div>
+          </div>
+          <details className="position-selector">
+            <summary>{visibleProgressionDrivers.length ? `${visibleProgressionDrivers.length} Drivers` : "No Drivers"}</summary>
+            <div className="position-selector-menu">
+              <div className="position-selector-actions">
+                <button type="button" onClick={selectAllProgressionDrivers}>All</button>
+                <button type="button" onClick={clearAllProgressionDrivers}>None</button>
+              </div>
+              <div className="position-selector-list">
+                {progressionDrivers.map((driver, idx) => {
+                  const checked = selectedProgressionDrivers.includes(driver);
+                  return (
+                    <label key={driver}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleProgressionDriver(driver)}
+                      />
+                      <span style={{ color: colorForDriver(driver, driverTeamMap, idx, overview?.season) }}>{driver}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
+        </div>
         <ResponsiveContainer width="100%" height={500}>
-          <LineChart data={overview?.points_progression || []}>
+          <LineChart data={visibleDriverProgression}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="round" />
-            <YAxis domain={[0, 450]} />
-            <Tooltip content={<ProgressionTooltip />} />
-            {progressionDrivers.map((driver, idx) => (
+            <XAxis
+              dataKey="round"
+              type="number"
+              domain={[1, finalSeasonRound]}
+              ticks={allSeasonRounds}
+              interval={0}
+              allowDecimals={false}
+              height={30}
+              tick={<RoundFlagTick roundMetaByRound={roundMetaByRound} />}
+            />
+            <YAxis domain={[0, driverProgressionAxisMax]} allowDecimals={false} />
+            <Tooltip content={<ProgressionTooltip roundMetaByRound={roundMetaByRound} />} />
+            {visibleProgressionDrivers.map((driver, idx) => (
               <Line
                 key={driver}
                 type="monotone"
                 dataKey={driver}
                 stroke={colorForDriver(driver, driverTeamMap, idx, overview?.season)}
                 strokeWidth={1.8}
-                dot={false}
+                dot={showDriverProgressionDots ? { r: 3 } : false}
+                connectNulls={false}
               />
             ))}
           </LineChart>
@@ -963,22 +1188,60 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
       </div>
 
       <div className="card progression-card">
-        <h3>Constructor Points Progression ({overview?.season || 2025})</h3>
-        <div className="small">Constructors ranked by cumulative points each round.</div>
+        <div className="positions-head">
+          <div>
+            <h3>Constructor Points Progression ({overview?.season || 2025})</h3>
+            <div className="small">Filter constructors ranked by cumulative points each round.</div>
+          </div>
+          <details className="position-selector">
+            <summary>{visibleProgressionConstructors.length ? `${visibleProgressionConstructors.length} Teams` : "No Teams"}</summary>
+            <div className="position-selector-menu">
+              <div className="position-selector-actions">
+                <button type="button" onClick={selectAllProgressionConstructors}>All</button>
+                <button type="button" onClick={clearAllProgressionConstructors}>None</button>
+              </div>
+              <div className="position-selector-list">
+                {progressionConstructors.map((team, idx) => {
+                  const checked = selectedProgressionConstructors.includes(team);
+                  return (
+                    <label key={team}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleProgressionConstructor(team)}
+                      />
+                      <span style={{ color: colorForTeam(team, `hsl(${(idx * 47) % 360} 70% 42%)`, overview?.season) }}>{team}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
+        </div>
         <ResponsiveContainer width="100%" height={420}>
-          <LineChart data={overview?.constructor_points_progression || []}>
+          <LineChart data={visibleConstructorProgression}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="round" />
-            <YAxis />
-            <Tooltip content={<ConstructorProgressionTooltip />} />
-            {progressionConstructors.map((team, idx) => (
+            <XAxis
+              dataKey="round"
+              type="number"
+              domain={[1, finalSeasonRound]}
+              ticks={allSeasonRounds}
+              interval={0}
+              allowDecimals={false}
+              height={30}
+              tick={<RoundFlagTick roundMetaByRound={roundMetaByRound} />}
+            />
+            <YAxis domain={[0, constructorProgressionAxisMax]} allowDecimals={false} />
+            <Tooltip content={<ConstructorProgressionTooltip roundMetaByRound={roundMetaByRound} />} />
+            {visibleProgressionConstructors.map((team, idx) => (
               <Line
                 key={team}
                 type="monotone"
                 dataKey={team}
                 stroke={colorForTeam(team, `hsl(${(idx * 47) % 360} 70% 42%)`, overview?.season)}
                 strokeWidth={2}
-                dot={false}
+                dot={showConstructorProgressionDots ? { r: 3 } : false}
+                connectNulls={false}
               />
             ))}
           </LineChart>
@@ -1627,16 +1890,6 @@ function EngineeringPanel({ roundNo, season, race }) {
   const showPositionsLapByLapUi = positionsViewTab === "lap_by_lap" && !positionsLoading && !positionsError && hasSolidPositionsData;
 
   const renderPositionsTab = () => {
-    if (positionsViewTab === "lap_by_lap" && !positionsLoading && !positionsError && !hasSolidPositionsData) {
-      return (
-        <div className="grid">
-          <div className="card wide-card">
-            <div className="small">No data.</div>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="grid">
         <div className="card wide-card">
