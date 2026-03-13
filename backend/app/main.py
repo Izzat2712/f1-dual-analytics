@@ -2347,10 +2347,26 @@ def casual_results(round_no: int, season: int = Query(2025)) -> dict:
 @app.get("/api/casual/rounds")
 def casual_rounds(season: int = Query(2025)) -> dict:
     season_data = get_season_data(season)
+    rounds_payload = {int(item["round"]): item for item in season_data.get("rounds", []) if item.get("round") is not None}
+    rounds_summary = []
+    for item in season_data.get("rounds_summary", []):
+        summary = dict(item)
+        round_payload = rounds_payload.get(int(summary.get("round", 0) or 0), {})
+        sprint_rows = round_payload.get("sprint") or []
+        sprint_winner = None
+        if sprint_rows:
+            sprint_sorted = sorted(
+                [row for row in sprint_rows if row.get("driver")],
+                key=lambda row: int(row.get("position", 999) or 999),
+            )
+            if sprint_sorted:
+                sprint_winner = sprint_sorted[0].get("driver")
+        summary["sprint_winner"] = sprint_winner
+        rounds_summary.append(summary)
     return {
         "season": season_data["season"],
-        "rounds": season_data.get("rounds_summary", []),
-        "count": len(season_data.get("rounds_summary", [])),
+        "rounds": rounds_summary,
+        "count": len(rounds_summary),
     }
 
 

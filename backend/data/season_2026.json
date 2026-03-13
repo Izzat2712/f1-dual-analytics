@@ -1262,7 +1262,7 @@
       "pole_time": null,
       "fastest_lap_driver": null,
       "fastest_lap_time": null,
-      "had_sprint": false
+      "had_sprint": true
     },
     {
       "round": 3,
@@ -1971,7 +1971,184 @@
         "locality": "Shanghai"
       },
       "results": [],
-      "sprint_qualifying": [],
+      "sprint_qualifying": [
+        {
+          "position": 1,
+          "driver": "George Russell",
+          "team": "Mercedes",
+          "sq1": "1:33.030",
+          "sq2": "1:32.241",
+          "sq3": "1:31.520"
+        },
+        {
+          "position": 2,
+          "driver": "Kimi Antonelli",
+          "team": "Mercedes",
+          "sq1": "1:33.455",
+          "sq2": "1:32.291",
+          "sq3": "1:31.809"
+        },
+        {
+          "position": 3,
+          "driver": "Lando Norris",
+          "team": "McLaren",
+          "sq1": "1:33.783",
+          "sq2": "1:33.086",
+          "sq3": "1:32.141"
+        },
+        {
+          "position": 4,
+          "driver": "Lewis Hamilton",
+          "team": "Ferrari",
+          "sq1": "1:33.148",
+          "sq2": "1:33.042",
+          "sq3": "1:32.161"
+        },
+        {
+          "position": 5,
+          "driver": "Oscar Piastri",
+          "team": "McLaren",
+          "sq1": "1:33.813",
+          "sq2": "1:33.038",
+          "sq3": "1:32.224"
+        },
+        {
+          "position": 6,
+          "driver": "Charles Leclerc",
+          "team": "Ferrari",
+          "sq1": "1:33.194",
+          "sq2": "1:32.602",
+          "sq3": "1:32.528"
+        },
+        {
+          "position": 7,
+          "driver": "Pierre Gasly",
+          "team": "Alpine F1 Team",
+          "sq1": "1:33.970",
+          "sq2": "1:33.405",
+          "sq3": "1:32.888"
+        },
+        {
+          "position": 8,
+          "driver": "Max Verstappen",
+          "team": "Red Bull",
+          "sq1": "1:34.170",
+          "sq2": "1:33.564",
+          "sq3": "1:33.254"
+        },
+        {
+          "position": 9,
+          "driver": "Oliver Bearman",
+          "team": "Haas F1 Team",
+          "sq1": "1:34.280",
+          "sq2": "1:33.501",
+          "sq3": "1:33.409"
+        },
+        {
+          "position": 10,
+          "driver": "Isack Hadjar",
+          "team": "Red Bull",
+          "sq1": "1:34.447",
+          "sq2": "1:33.620",
+          "sq3": "1:33.723"
+        },
+        {
+          "position": 11,
+          "driver": "Nico Hulkenberg",
+          "team": "Audi",
+          "sq1": "1:33.997",
+          "sq2": "1:33.635",
+          "sq3": null
+        },
+        {
+          "position": 12,
+          "driver": "Esteban Ocon",
+          "team": "Haas F1 Team",
+          "sq1": "1:34.087",
+          "sq2": "1:33.639",
+          "sq3": null
+        },
+        {
+          "position": 13,
+          "driver": "Liam Lawson",
+          "team": "RB F1 Team",
+          "sq1": "1:34.110",
+          "sq2": "1:33.714",
+          "sq3": null
+        },
+        {
+          "position": 14,
+          "driver": "Gabriel Bortoleto",
+          "team": "Audi",
+          "sq1": "1:34.291",
+          "sq2": "1:33.774",
+          "sq3": null
+        },
+        {
+          "position": 15,
+          "driver": "Arvid Lindblad",
+          "team": "RB F1 Team",
+          "sq1": "1:34.495",
+          "sq2": "1:34.048",
+          "sq3": null
+        },
+        {
+          "position": 16,
+          "driver": "Franco Colapinto",
+          "team": "Alpine F1 Team",
+          "sq1": "1:34.592",
+          "sq2": "1:34.327",
+          "sq3": null
+        },
+        {
+          "position": 17,
+          "driver": "Carlos Sainz",
+          "team": "Williams",
+          "sq1": "1:34.761",
+          "sq2": null,
+          "sq3": null
+        },
+        {
+          "position": 18,
+          "driver": "Alexander Albon",
+          "team": "Williams",
+          "sq1": "1:35.305",
+          "sq2": null,
+          "sq3": null
+        },
+        {
+          "position": 19,
+          "driver": "Fernando Alonso",
+          "team": "Aston Martin",
+          "sq1": "1:35.581",
+          "sq2": null,
+          "sq3": null
+        },
+        {
+          "position": 20,
+          "driver": "Lance Stroll",
+          "team": "Aston Martin",
+          "sq1": "1:36.151",
+          "sq2": null,
+          "sq3": null
+        },
+        {
+          "position": 21,
+          "driver": "Valtteri Bottas",
+          "team": "Cadillac",
+          "sq1": "1:37.378",
+          "sq2": null,
+          "sq3": null
+        },
+        {
+          "position": 22,
+          "driver": "Sergio Perez",
+          "team": "Cadillac",
+          "sq1": null,
+          "sq2": null,
+          "sq3": null
+        }
+      ],
       "sprint": [],
       "qualifying": [],
       "practice": {
@@ -1991,7 +2168,7 @@
         "pole_time": null,
         "fastest_lap_driver": null,
         "fastest_lap_time": null,
-        "had_sprint": false
+        "had_sprint": true
       }
     },
     {

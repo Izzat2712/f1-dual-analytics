@@ -1264,7 +1264,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                     <td>{r.winner || "-"}</td>
                     <td>{r.pole || "-"}</td>
                     <td>{r.fastest_lap_driver || "-"}</td>
-                    <td>{r.had_sprint ? "Yes" : "No"}</td>
+                    <td>{r.sprint_winner || "-"}</td>
                   </tr>
                 ))
                 : <tr><td colSpan={6} className="small">{noDataText}</td></tr>}
