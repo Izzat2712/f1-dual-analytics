@@ -447,7 +447,7 @@ function formatCountdownSessionLabel(label) {
 
 function isCompletedRoundSummary(summary) {
   if (!summary) return false;
-  return Boolean(summary.winner || summary.fastest_lap_driver || summary.pole);
+  return Boolean(summary.winner || summary.fastest_lap_driver || summary.pole || summary.sprint_winner);
 }
 
 function buildVisibleProgressionRows(rows, latestCompletedRound, keys) {
