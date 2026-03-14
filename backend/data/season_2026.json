@@ -1258,8 +1258,8 @@
       "country": "China",
       "winner": null,
       "winner_team": null,
-      "pole": null,
-      "pole_time": null,
+      "pole": "Kimi Antonelli",
+      "pole_time": "1:32.064",
       "fastest_lap_driver": null,
       "fastest_lap_time": null,
       "had_sprint": true
