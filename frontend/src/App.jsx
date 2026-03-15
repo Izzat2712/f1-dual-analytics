@@ -506,6 +506,7 @@ function NextSessionCountdown() {
   const normalizedRounds = useMemo(() => {
     return (scheduleRounds || [])
       .map((round) => {
+        const roundNumber = Number(round?.round || 0);
         const sessions = (round?.session_schedule || [])
           .map((entry) => {
             const ts = parseSessionTimestamp(entry?.start_utc);
@@ -520,21 +521,35 @@ function NextSessionCountdown() {
           .filter(Boolean)
           .sort((a, b) => a.ts - b.ts);
         return {
-          round: Number(round?.round || 0),
+          round: roundNumber,
           raceName: String(round?.race_name || "Grand Prix"),
           country: round?.track?.country || "",
           sessions,
         };
       })
-      .filter((round) => round.sessions.length > 0)
-      .sort((a, b) => a.round - b.round);
+      .filter((round) => round.round > 0 && round.sessions.length > 0)
+      .sort((a, b) => {
+        const aFirst = a.sessions[0]?.ts ?? Number.POSITIVE_INFINITY;
+        const bFirst = b.sessions[0]?.ts ?? Number.POSITIVE_INFINITY;
+        if (aFirst !== bFirst) return aFirst - bFirst;
+        return a.round - b.round;
+      });
   }, [scheduleRounds]);
 
   const targetRound = useMemo(() => {
-    return normalizedRounds.find((round) => {
-      const raceSession = round.sessions.find((session) => session.code === "race") || round.sessions[round.sessions.length - 1];
-      return raceSession && raceSession.ts > nowMs;
-    }) || null;
+    let bestRound = null;
+    let bestSessionTs = Number.POSITIVE_INFINITY;
+
+    for (const round of normalizedRounds) {
+      const nextUpcomingSession = round.sessions.find((session) => session.ts > nowMs);
+      if (!nextUpcomingSession) continue;
+      if (nextUpcomingSession.ts < bestSessionTs) {
+        bestSessionTs = nextUpcomingSession.ts;
+        bestRound = round;
+      }
+    }
+
+    return bestRound;
   }, [normalizedRounds, nowMs]);
 
   const nextSession = useMemo(() => {
@@ -785,7 +800,11 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const noDataText = "No data yet for this season/round.";
   const progressionDrivers = overview?.progression_drivers || [];
   const progressionConstructors = overview?.progression_constructors || [];
-  const isSprintWeekend = (race?.sprint_qualifying?.length || 0) > 0;
+  const isSprintWeekend = Boolean(
+    race?.summary?.had_sprint
+    || (race?.sprint_qualifying?.length || 0) > 0
+    || (race?.sprint?.length || 0) > 0
+  );
   const [sprintSessionTab, setSprintSessionTab] = useState("results");
   const [raceSessionTab, setRaceSessionTab] = useState("results");
   const [selectedProgressionDrivers, setSelectedProgressionDrivers] = useState([]);
@@ -1312,26 +1331,46 @@ function EngineeringPanel({ roundNo, season, race }) {
 
   const drivers = useMemo(() => race?.results?.map((r) => r.driver) || [], [race]);
   const isSprintWeekend = useMemo(
-    () => Boolean((race?.sprint_qualifying?.length || 0) > 0 || (race?.sprint?.length || 0) > 0),
+    () => Boolean(
+      race?.summary?.had_sprint
+      || (race?.sprint_qualifying?.length || 0) > 0
+      || (race?.sprint?.length || 0) > 0
+    ),
     [race]
   );
+  const telemetryDrivers = useMemo(() => telemetryCatalog?.drivers || [], [telemetryCatalog]);
+  const telemetryDriverNames = useMemo(
+    () => {
+      const names = telemetryDrivers.map((item) => item?.driver).filter(Boolean);
+      if (names.length) return names;
+      if (telemetrySession === "sprint") return drivers;
+      return [];
+    },
+    [drivers, telemetryDrivers, telemetrySession]
+  );
+  const h2hDriverOptions = useMemo(() => {
+    if (h2hSession === "sprint" && telemetryDriverNames.length) {
+      return telemetryDriverNames;
+    }
+    return drivers;
+  }, [drivers, h2hSession, telemetryDriverNames]);
 
   useEffect(() => {
-    if (!drivers.length) {
+    if (!h2hDriverOptions.length) {
       setH2hDriverA("");
       setH2hDriverB("");
       return;
     }
-    if (h2hDriverA && !drivers.includes(h2hDriverA)) {
+    if (h2hDriverA && !h2hDriverOptions.includes(h2hDriverA)) {
       setH2hDriverA("");
     }
-    if (h2hDriverB && !drivers.includes(h2hDriverB)) {
+    if (h2hDriverB && !h2hDriverOptions.includes(h2hDriverB)) {
       setH2hDriverB("");
     }
     if (h2hDriverA && h2hDriverB && h2hDriverA === h2hDriverB) {
       setH2hDriverB("");
     }
-  }, [drivers, h2hDriverA, h2hDriverB]);
+  }, [h2hDriverOptions, h2hDriverA, h2hDriverB]);
 
 
   useEffect(() => {
@@ -1757,6 +1796,12 @@ function EngineeringPanel({ roundNo, season, race }) {
     }
     return map;
   }, [h2hCommonLaps]);
+  const sprintH2HUnavailable = h2hSession === "sprint"
+    && !h2hLoading
+    && !h2hError
+    && h2hDriverA
+    && h2hDriverB
+    && h2hCommonLaps.length === 0;
 
   const selectedH2HRow = selectedH2HLap != null ? h2hLapByNumber[selectedH2HLap] : null;
 
@@ -1818,11 +1863,6 @@ function EngineeringPanel({ roundNo, season, race }) {
 
   const selectedSectorRow = sectorRows.find((row) => row.sector === selectedSectorIndex) || sectorRows[0] || null;
 
-  const telemetryDrivers = useMemo(() => telemetryCatalog?.drivers || [], [telemetryCatalog]);
-  const telemetryDriverNames = useMemo(
-    () => telemetryDrivers.map((item) => item?.driver).filter(Boolean),
-    [telemetryDrivers]
-  );
   const telemetryDriverTeamMap = useMemo(() => {
     const map = {};
     for (const result of race?.results || []) {
@@ -2243,7 +2283,7 @@ function EngineeringPanel({ roundNo, season, race }) {
             <span className="small">Driver A</span>
             <select value={h2hDriverA} onChange={(e) => setH2hDriverA(e.target.value)}>
               <option value="">Select driver</option>
-              {drivers.map((name) => <option key={`h2h-a-${name}`} value={name}>{name}</option>)}
+              {h2hDriverOptions.map((name) => <option key={`h2h-a-${name}`} value={name}>{name}</option>)}
             </select>
             {h2hTab === "track_dominance" ? (
               <>
@@ -2256,7 +2296,7 @@ function EngineeringPanel({ roundNo, season, race }) {
             <span className="small">Driver B</span>
             <select value={h2hDriverB} onChange={(e) => setH2hDriverB(e.target.value)}>
               <option value="">Select driver</option>
-              {drivers.map((name) => <option key={`h2h-b-${name}`} value={name}>{name}</option>)}
+              {h2hDriverOptions.map((name) => <option key={`h2h-b-${name}`} value={name}>{name}</option>)}
             </select>
             {h2hTab === "lap_times" ? (
               <>
@@ -2290,6 +2330,9 @@ function EngineeringPanel({ roundNo, season, race }) {
           {h2hError ? <div className="small">{h2hError}</div> : null}
           {!h2hDriverA || !h2hDriverB ? <div className="small">Please select Driver A and Driver B to load H2H data.</div> : null}
           {h2hData?.notes?.length ? <div className="small">{h2hData.notes.join(" ")}</div> : null}
+          {sprintH2HUnavailable ? (
+            <div className="small">Sprint lap timing is unavailable from the current source for this round, so lap-by-lap H2H and sector comparison cannot be shown yet.</div>
+          ) : null}
 
           {!h2hLoading && !h2hError && h2hTab === "lap_times" ? (
             <div className="h2h-section">
@@ -2477,6 +2520,7 @@ function EngineeringPanel({ roundNo, season, race }) {
         const sourceLabel = sourceRaw === "openf1" ? "OPENF1" : (sourceRaw === "jolpica" ? "JOLPICA" : "NO DATA");
         const sourceClass = sourceRaw === "openf1" ? "source-openf1" : (sourceRaw === "jolpica" ? "source-na" : "source-na");
         const hasTraceData = sourceRaw !== "unavailable" && traceSamples.length > 0;
+        const sprintTelemetryUnavailable = telemetrySession === "sprint" && driverName && !hasTraceData && !traceState?.error;
         const centerClass = TELEMETRY_CARDS.length === 5 && idx >= 3
           ? (idx === 3 ? "telemetry-card-center-left" : "telemetry-card-center-right")
           : "";
@@ -2511,6 +2555,9 @@ function EngineeringPanel({ roundNo, season, race }) {
             {!traceState && telemetryDriverNames.length && driverName ? <div className="small">Loading trace...</div> : null}
             {!driverName ? <div className="small">Choose driver to load telemetry.</div> : null}
             {traceState && !traceState?.error && !hasTraceData ? <div className="small">No data</div> : null}
+            {sprintTelemetryUnavailable ? (
+              <div className="small">Sprint telemetry trace is unavailable for this round because lap-level timing data is missing from the current source.</div>
+            ) : null}
 
             {hasTraceData ? (
               <div className="telemetry-chart-wrap" style={{ width: "100%", height: 230, marginTop: "0.45rem" }}>

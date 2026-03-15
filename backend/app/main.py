@@ -710,6 +710,8 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
                 }
             )
         rows = sorted([r for r in parsed_rows if r.get("driver")], key=lambda item: _safe_position(item.get("position")))
+    if not rows:
+        rows = load_openf1_session_driver_rows(season, round_payload, normalized_session)
 
     # Primary source: OpenF1 (real compound history from stints endpoint).
     try:
@@ -1250,7 +1252,11 @@ def _summarize_sector_samples(samples: list[dict]) -> dict:
 
 
 def _load_openf1_driver_h2h_laps(session_key: int, driver_number: int) -> list[dict]:
-    raw_laps = fetch_openf1("laps", session_key=session_key, driver_number=driver_number)
+    raw_laps = [
+        row
+        for row in fetch_openf1("laps", session_key=session_key)
+        if int(row.get("driver_number", 0) or 0) == int(driver_number)
+    ]
     raw_car = fetch_openf1("car_data", session_key=session_key, driver_number=driver_number)
 
     car_samples: list[tuple[datetime, dict]] = []
@@ -1402,6 +1408,8 @@ def build_h2h_payload(
                 }
             )
         rows = sorted([r for r in parsed_rows if r.get("driver")], key=lambda row: int(row.get("position", 999) or 999))
+    if not rows:
+        rows = load_openf1_session_driver_rows(season, round_payload, normalized_session)
 
     available_drivers = [item.get("driver") for item in rows]
     available_drivers = [name for name in available_drivers if isinstance(name, str) and name.strip()]
@@ -1592,6 +1600,8 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
                 }
             )
         rows.sort(key=lambda row: int(row.get("position", 999) or 999))
+    if not rows:
+        rows = load_openf1_session_driver_rows(season, round_payload, normalized_session)
 
     raw_results = load_official_results_rows(season, round_no, normalized_session)
     lap_times_by_driver: dict[str, dict[int, float]] = {}
@@ -1612,18 +1622,40 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
                     source = "jolpica"
             except Exception:
                 lap_times_by_driver, max_lap_seen = {}, 0
-        if not lap_times_by_driver:
-            try:
-                lap_times_by_driver, max_lap_seen = load_openf1_lap_times_by_driver(season, round_payload, normalized_session)
-                if lap_times_by_driver:
-                    source = "openf1"
-            except Exception:
-                lap_times_by_driver, max_lap_seen = {}, 0
+    if not lap_times_by_driver:
+        try:
+            lap_times_by_driver, max_lap_seen = load_openf1_lap_times_by_driver(season, round_payload, normalized_session)
+            if lap_times_by_driver:
+                source = "openf1"
+        except Exception:
+            lap_times_by_driver, max_lap_seen = {}, 0
 
     expected_total_laps = expected_lap_count(season, round_no, raw_results)
     fallback_laps = 24 if normalized_session == "sprint" else 57
     total_laps = max(1, expected_total_laps or max_lap_seen or fallback_laps)
     if not lap_times_by_driver:
+        if rows:
+            payload = {
+                "season": season,
+                "round": round_no,
+                "race": round_payload.get("race"),
+                "session": normalized_session,
+                "source": "unavailable",
+                "total_laps": total_laps,
+                "drivers": [
+                    {
+                        "driver": row.get("driver"),
+                        "team": row.get("team"),
+                        "position": int(row.get("position", idx + 1) or (idx + 1)),
+                        "laps": [],
+                        "fastest_lap": None,
+                    }
+                    for idx, row in enumerate(rows)
+                    if row.get("driver")
+                ],
+            }
+            TELEMETRY_CATALOG_CACHE[cache_key] = payload
+            return payload
         payload = {
             "season": season,
             "round": round_no,
@@ -1850,7 +1882,11 @@ def _build_openf1_telemetry_trace(
     if driver_number is None:
         return None
 
-    raw_laps = fetch_openf1("laps", session_key=session_key, driver_number=driver_number)
+    raw_laps = [
+        row
+        for row in fetch_openf1("laps", session_key=session_key)
+        if int(row.get("driver_number", 0) or 0) == int(driver_number)
+    ]
     lap_rows: list[dict] = []
     for row in raw_laps:
         try:
@@ -2136,6 +2172,44 @@ def pick_openf1_session(season: int, round_payload: dict, session_name: str) -> 
         return (same_country + day_diff, abs((session_dt - race_dt).total_seconds()))
 
     return min(sessions, key=score)
+
+
+def load_openf1_session_driver_rows(
+    season: int,
+    round_payload: dict,
+    session_kind: str = "race",
+) -> list[dict]:
+    normalized_session = str(session_kind or "race").strip().lower()
+    if normalized_session not in {"race", "sprint"}:
+        normalized_session = "race"
+
+    openf1_session_name = "Sprint" if normalized_session == "sprint" else "Race"
+    openf1_session = pick_openf1_session(season, round_payload, openf1_session_name)
+    if not openf1_session or not openf1_session.get("session_key"):
+        return []
+
+    session_key = int(openf1_session["session_key"])
+    openf1_drivers = fetch_openf1("drivers", session_key=session_key)
+    rows = []
+    for idx, item in enumerate(sorted(openf1_drivers, key=lambda row: (
+        str(row.get("team_name", "")),
+        str(row.get("full_name", "")),
+        int(row.get("driver_number", 999) or 999),
+    )), start=1):
+        full_name = str(item.get("full_name", "")).strip()
+        if not full_name:
+            continue
+        team_name = str(item.get("team_name", "")).strip()
+        rows.append(
+            {
+                "position": idx,
+                "driver": full_name.title() if full_name.isupper() else full_name,
+                "team": team_name or None,
+                "status": None,
+                "grid": 0,
+            }
+        )
+    return rows
 
 
 def load_openf1_lap_times_by_driver(
