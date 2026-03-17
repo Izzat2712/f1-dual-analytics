@@ -709,6 +709,7 @@ function PositionTooltip({
   driverColors,
   allDrivers,
   dnfDriversSet,
+  completedLapsByDriver,
   lastSeenLapByDriver,
   lastSeenPositionByDriver,
 }) {
@@ -722,14 +723,14 @@ function PositionTooltip({
   }
 
   const items = (allDrivers || []).map((driver) => {
-    const value = row[driver];
-    if (Number.isFinite(value)) {
-      return { driver, rankValue: Number(value), display: `P${value}` };
-    }
-    const lastSeen = lastSeenLapByDriver?.[driver] ?? -1;
+    const lastSeen = completedLapsByDriver?.[driver] ?? lastSeenLapByDriver?.[driver] ?? -1;
     const lastPos = lastSeenPositionByDriver?.[driver];
     if (dnfDriversSet?.has(driver) && lap > lastSeen) {
       return { driver, rankValue: 999, display: "(DNF)" };
+    }
+    const value = row[driver];
+    if (Number.isFinite(value)) {
+      return { driver, rankValue: Number(value), display: `P${value}` };
     }
     if (Number.isFinite(lastPos)) {
       return { driver, rankValue: Number(lastPos), display: `P${lastPos}` };
@@ -1329,7 +1330,14 @@ function EngineeringPanel({ roundNo, season, race }) {
   const [telemetryCardLoading, setTelemetryCardLoading] = useState({});
   const telemetryFetchSignatureRef = useRef({});
 
-  const drivers = useMemo(() => race?.results?.map((r) => r.driver) || [], [race]);
+  const raceDrivers = useMemo(
+    () => (race?.results || []).map((r) => r?.driver).filter(Boolean),
+    [race]
+  );
+  const sprintDrivers = useMemo(
+    () => (race?.sprint || []).map((r) => r?.driver).filter(Boolean),
+    [race]
+  );
   const isSprintWeekend = useMemo(
     () => Boolean(
       race?.summary?.had_sprint
@@ -1340,20 +1348,12 @@ function EngineeringPanel({ roundNo, season, race }) {
   );
   const telemetryDrivers = useMemo(() => telemetryCatalog?.drivers || [], [telemetryCatalog]);
   const telemetryDriverNames = useMemo(
-    () => {
-      const names = telemetryDrivers.map((item) => item?.driver).filter(Boolean);
-      if (names.length) return names;
-      if (telemetrySession === "sprint") return drivers;
-      return [];
-    },
-    [drivers, telemetryDrivers, telemetrySession]
+    () => telemetryDrivers.map((item) => item?.driver).filter(Boolean),
+    [telemetryDrivers]
   );
   const h2hDriverOptions = useMemo(() => {
-    if (h2hSession === "sprint" && telemetryDriverNames.length) {
-      return telemetryDriverNames;
-    }
-    return drivers;
-  }, [drivers, h2hSession, telemetryDriverNames]);
+    return h2hSession === "sprint" ? sprintDrivers : raceDrivers;
+  }, [h2hSession, raceDrivers, sprintDrivers]);
 
   useEffect(() => {
     if (!h2hDriverOptions.length) {
@@ -1361,14 +1361,13 @@ function EngineeringPanel({ roundNo, season, race }) {
       setH2hDriverB("");
       return;
     }
-    if (h2hDriverA && !h2hDriverOptions.includes(h2hDriverA)) {
-      setH2hDriverA("");
+    const firstDriver = h2hDriverOptions[0] || "";
+    const secondDriver = h2hDriverOptions.find((name) => name !== firstDriver) || "";
+    if (!h2hDriverA || !h2hDriverOptions.includes(h2hDriverA)) {
+      setH2hDriverA(firstDriver);
     }
-    if (h2hDriverB && !h2hDriverOptions.includes(h2hDriverB)) {
-      setH2hDriverB("");
-    }
-    if (h2hDriverA && h2hDriverB && h2hDriverA === h2hDriverB) {
-      setH2hDriverB("");
+    if (!h2hDriverB || !h2hDriverOptions.includes(h2hDriverB) || h2hDriverB === h2hDriverA) {
+      setH2hDriverB(secondDriver);
     }
   }, [h2hDriverOptions, h2hDriverA, h2hDriverB]);
 
@@ -1493,9 +1492,10 @@ function EngineeringPanel({ roundNo, season, race }) {
     }
     setTelemetrySelections((current) => {
       const next = {};
-      TELEMETRY_CARDS.forEach((card) => {
+      TELEMETRY_CARDS.forEach((card, idx) => {
         const existing = current?.[card.key] || {};
-        const chosenDriver = drivers.includes(existing.driver) ? existing.driver : "";
+        const fallbackDriver = idx === 0 ? (drivers[0] || "") : "";
+        const chosenDriver = drivers.includes(existing.driver) ? existing.driver : fallbackDriver;
         next[card.key] = {
           driver: chosenDriver,
           lap: existing.lap || "fastest",
@@ -1673,6 +1673,10 @@ function EngineeringPanel({ roundNo, season, race }) {
   }, [positionsData]);
 
   const dnfDriversSet = useMemo(() => new Set(positionsData?.dnf_drivers || []), [positionsData]);
+  const completedLapsByDriver = useMemo(
+    () => positionsData?.completed_laps_by_driver || {},
+    [positionsData]
+  );
   const hasSolidPositionsData = useMemo(() => {
     if ((positionsData?.source || "") === "unavailable") return false;
     const laps = positionsData?.laps || [];
@@ -1706,6 +1710,20 @@ function EngineeringPanel({ roundNo, season, race }) {
     }
     return lastPos;
   }, [positionsData, positionDrivers]);
+
+  const positionChartRows = useMemo(() => {
+    return (positionsData?.laps || []).map((row) => {
+      const nextRow = { ...row };
+      const lap = Number(row?.lap);
+      for (const driver of positionDrivers) {
+        const completedLap = Number(completedLapsByDriver?.[driver] ?? lastSeenLapByDriver?.[driver] ?? -1);
+        if (dnfDriversSet.has(driver) && Number.isFinite(lap) && lap > completedLap) {
+          nextRow[driver] = null;
+        }
+      }
+      return nextRow;
+    });
+  }, [positionsData, positionDrivers, dnfDriversSet, completedLapsByDriver, lastSeenLapByDriver]);
 
   const dashedDriversSet = useMemo(() => {
     const teamToDrivers = new Map();
@@ -2007,7 +2025,7 @@ function EngineeringPanel({ roundNo, season, race }) {
             {showPositionsLapByLapUi ? (
               <div style={{ width: "100%", height: "680px" }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={positionsData?.laps || []}>
+                  <LineChart data={positionChartRows}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="lap"
@@ -2031,6 +2049,7 @@ function EngineeringPanel({ roundNo, season, race }) {
                           driverColors={positionDriverColors}
                           allDrivers={positionDrivers}
                           dnfDriversSet={dnfDriversSet}
+                          completedLapsByDriver={completedLapsByDriver}
                           lastSeenLapByDriver={lastSeenLapByDriver}
                           lastSeenPositionByDriver={lastSeenPositionByDriver}
                         />

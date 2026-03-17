@@ -173,7 +173,7 @@ OPENF1_SESSIONS_CACHE: dict[tuple[int, str], list[dict]] = {}
 ROUND_SESSION_SCHEDULE_CACHE: dict[tuple[int, int], list[dict]] = {}
 SEASON_SESSION_SCHEDULE_CACHE: dict[int, list[dict]] = {}
 POSITIONS_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "positions_cache"
-POSITIONS_CACHE_VERSION = 11
+POSITIONS_CACHE_VERSION = 15
 
 
 def get_season_cache_mtime_ns(season: int) -> int | None:
@@ -491,9 +491,10 @@ def reconstruct_positions_from_lap_times(
             (
                 driver_name
                 for driver_name, completed_lap in completed_laps.items()
-                if completed_lap == lap_no
+                if completed_lap > 0 and completed_lap <= lap_no
             ),
             key=lambda driver_name: (
+                -completed_laps.get(driver_name, 0),
                 cumulative_times.get(driver_name, float("inf")),
                 driver_name,
             ),
@@ -1254,10 +1255,10 @@ def _summarize_sector_samples(samples: list[dict]) -> dict:
 def _load_openf1_driver_h2h_laps(session_key: int, driver_number: int) -> list[dict]:
     raw_laps = [
         row
-        for row in fetch_openf1("laps", session_key=session_key)
+        for row in fetch_openf1("laps", session_key=session_key, timeout_s=6, max_attempts=2)
         if int(row.get("driver_number", 0) or 0) == int(driver_number)
     ]
-    raw_car = fetch_openf1("car_data", session_key=session_key, driver_number=driver_number)
+    raw_car = fetch_openf1("car_data", session_key=session_key, driver_number=driver_number, timeout_s=8, max_attempts=1)
 
     car_samples: list[tuple[datetime, dict]] = []
     for row in raw_car:
@@ -1607,6 +1608,7 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
     lap_times_by_driver: dict[str, dict[int, float]] = {}
     max_lap_seen = 0
     source = "unavailable"
+    row_driver_count = sum(1 for row in rows if row.get("driver"))
     if normalized_session == "race":
         driver_id_to_name: dict[str, str] = {}
         for row in raw_results:
@@ -1622,13 +1624,27 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
                     source = "jolpica"
             except Exception:
                 lap_times_by_driver, max_lap_seen = {}, 0
-    if not lap_times_by_driver:
+
+    current_match_count = _count_lap_time_matches(rows, lap_times_by_driver) if lap_times_by_driver else 0
+    should_try_openf1 = not lap_times_by_driver
+    if normalized_session == "race" and row_driver_count and current_match_count < row_driver_count:
+        should_try_openf1 = True
+
+    if should_try_openf1:
         try:
-            lap_times_by_driver, max_lap_seen = load_openf1_lap_times_by_driver(season, round_payload, normalized_session)
-            if lap_times_by_driver:
+            openf1_lap_times_by_driver, openf1_max_lap_seen = load_openf1_lap_times_by_driver(
+                season,
+                round_payload,
+                normalized_session,
+            )
+            openf1_match_count = _count_lap_time_matches(rows, openf1_lap_times_by_driver) if openf1_lap_times_by_driver else 0
+            if openf1_lap_times_by_driver and (not lap_times_by_driver or openf1_match_count > current_match_count):
+                lap_times_by_driver = openf1_lap_times_by_driver
+                max_lap_seen = openf1_max_lap_seen
                 source = "openf1"
         except Exception:
-            lap_times_by_driver, max_lap_seen = {}, 0
+            if not lap_times_by_driver:
+                lap_times_by_driver, max_lap_seen = {}, 0
 
     expected_total_laps = expected_lap_count(season, round_no, raw_results)
     fallback_laps = 24 if normalized_session == "sprint" else 57
@@ -1668,15 +1684,17 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
         TELEMETRY_CATALOG_CACHE[cache_key] = payload
         return payload
 
+    normalized_lap_times_by_driver = _build_normalized_lap_times_lookup(lap_times_by_driver)
     drivers: list[dict] = []
     for row in rows:
         driver_name = row.get("driver")
         if not driver_name:
             continue
-        lap_times = lap_times_by_driver.get(driver_name, {})
+        lap_times = lap_times_by_driver.get(driver_name) or normalized_lap_times_by_driver.get(
+            normalize_driver_label(driver_name),
+            {},
+        )
         available_laps = sorted(int(lap_no) for lap_no in lap_times.keys() if int(lap_no) > 0)
-        if not available_laps:
-            continue
 
         fastest_lap = None
         if lap_times:
@@ -1707,6 +1725,42 @@ def build_round_telemetry_catalog(season: int, round_no: int, session_kind: str 
     }
     TELEMETRY_CATALOG_CACHE[cache_key] = payload
     return payload
+
+
+def _build_normalized_lap_times_lookup(lap_times_by_driver: dict[str, dict[int, float]]) -> dict[str, dict[int, float]]:
+    normalized_lookup: dict[str, dict[int, float]] = {}
+    for driver_name, laps in (lap_times_by_driver or {}).items():
+        normalized_name = normalize_driver_label(driver_name)
+        if not normalized_name:
+            continue
+        bucket = normalized_lookup.setdefault(normalized_name, {})
+        for lap_no, lap_time_s in (laps or {}).items():
+            try:
+                lap_no_int = int(lap_no)
+                lap_time_value = float(lap_time_s)
+            except (TypeError, ValueError):
+                continue
+            if lap_no_int <= 0 or lap_time_value <= 0:
+                continue
+            existing = bucket.get(lap_no_int)
+            if existing is None or lap_time_value < existing:
+                bucket[lap_no_int] = lap_time_value
+    return normalized_lookup
+
+
+def _count_lap_time_matches(rows: list[dict], lap_times_by_driver: dict[str, dict[int, float]]) -> int:
+    if not rows or not lap_times_by_driver:
+        return 0
+    normalized_lookup = _build_normalized_lap_times_lookup(lap_times_by_driver)
+    matches = 0
+    for row in rows:
+        driver_name = row.get("driver")
+        if not driver_name:
+            continue
+        lap_times = lap_times_by_driver.get(driver_name) or normalized_lookup.get(normalize_driver_label(driver_name))
+        if lap_times:
+            matches += 1
+    return matches
 
 
 def _build_synthetic_telemetry_trace(
@@ -1882,11 +1936,13 @@ def _build_openf1_telemetry_trace(
     if driver_number is None:
         return None
 
-    raw_laps = [
-        row
-        for row in fetch_openf1("laps", session_key=session_key)
-        if int(row.get("driver_number", 0) or 0) == int(driver_number)
-    ]
+    raw_laps = fetch_openf1(
+        "laps",
+        session_key=session_key,
+        driver_number=driver_number,
+        timeout_s=6,
+        max_attempts=2,
+    )
     lap_rows: list[dict] = []
     for row in raw_laps:
         try:
@@ -1949,7 +2005,16 @@ def _build_openf1_telemetry_trace(
         else:
             lap_end = lap_start + timedelta(seconds=120)
 
-    raw_car = fetch_openf1("car_data", session_key=session_key, driver_number=driver_number)
+    car_query: dict[str, str | int] = {
+        "session_key": session_key,
+        "driver_number": driver_number,
+    }
+    if lap_start is not None:
+        car_query["date>"] = lap_start.isoformat()
+    if lap_end is not None:
+        car_query["date<"] = lap_end.isoformat()
+
+    raw_car = fetch_openf1("car_data", timeout_s=6, max_attempts=2, **car_query)
     car_samples: list[tuple[datetime, dict]] = []
     for row in raw_car:
         ts = parse_iso8601(row.get("date"))
@@ -2086,28 +2151,34 @@ def fetch_positions_fast(path: str, **query: str | int) -> dict:
             raise
 
 
-def fetch_openf1(path: str, **query: str | int) -> list[dict]:
+def fetch_openf1(
+    path: str,
+    *,
+    timeout_s: float = 18,
+    max_attempts: int = 4,
+    **query: str | int,
+) -> list[dict]:
     qs = f"?{urlencode(query)}" if query else ""
     url = f"{OPENF1_BASE}/{path}{qs}"
     attempts = 0
     while True:
         attempts += 1
         try:
-            with urlopen(url, timeout=18) as response:
+            with urlopen(url, timeout=timeout_s) as response:
                 data = json.loads(response.read().decode("utf-8"))
             return data if isinstance(data, list) else []
         except HTTPError as exc:
-            if exc.code == 429 and attempts < 4:
+            if exc.code == 429 and attempts < max_attempts:
                 time.sleep(0.35 * attempts)
                 continue
             raise
         except URLError:
-            if attempts < 4:
+            if attempts < max_attempts:
                 time.sleep(0.35 * attempts)
                 continue
             raise
         except TimeoutError:
-            if attempts < 4:
+            if attempts < max_attempts:
                 time.sleep(0.35 * attempts)
                 continue
             raise
@@ -2135,7 +2206,7 @@ def get_openf1_sessions(season: int, session_name: str) -> list[dict]:
     cached = OPENF1_SESSIONS_CACHE.get(key)
     if cached is not None:
         return cached
-    sessions = fetch_openf1("sessions", year=season, session_name=normalized_name)
+    sessions = fetch_openf1("sessions", year=season, session_name=normalized_name, timeout_s=4, max_attempts=1)
     sessions = sorted(sessions, key=lambda item: str(item.get("date_start", "")))
     OPENF1_SESSIONS_CACHE[key] = sessions
     return sessions
@@ -2189,7 +2260,7 @@ def load_openf1_session_driver_rows(
         return []
 
     session_key = int(openf1_session["session_key"])
-    openf1_drivers = fetch_openf1("drivers", session_key=session_key)
+    openf1_drivers = fetch_openf1("drivers", session_key=session_key, timeout_s=6, max_attempts=2)
     rows = []
     for idx, item in enumerate(sorted(openf1_drivers, key=lambda row: (
         str(row.get("team_name", "")),
@@ -2227,7 +2298,7 @@ def load_openf1_lap_times_by_driver(
         return {}, 0
 
     session_key = int(openf1_session["session_key"])
-    openf1_drivers = fetch_openf1("drivers", session_key=session_key)
+    openf1_drivers = fetch_openf1("drivers", session_key=session_key, timeout_s=3, max_attempts=1)
     name_by_number: dict[int, str] = {}
     for item in openf1_drivers:
         try:
@@ -2257,6 +2328,141 @@ def load_openf1_lap_times_by_driver(
         lap_times_by_driver.setdefault(driver_name, {})[lap_no] = lap_time_s
 
     return lap_times_by_driver, max_lap_seen
+
+
+def _build_positions_from_lap_times(
+    round_payload: dict,
+    season: int,
+    round_no: int,
+    session_kind: str,
+    session_rows: list[dict],
+    driver_team_map: dict[str, str],
+    lap_times_by_driver: dict[str, dict[int, float]],
+    target_laps: int,
+    source: str,
+) -> dict:
+    normalized_session = str(session_kind or "race").strip().lower()
+    if normalized_session not in {"race", "sprint"}:
+        normalized_session = "race"
+
+    session_driver_names = {
+        normalize_driver_name_key(row.get("driver")): row.get("driver")
+        for row in session_rows or []
+        if row.get("driver")
+    }
+
+    lap_timings_by_lap: dict[int, dict[str, float]] = {}
+    for driver_name, laps_by_no in (lap_times_by_driver or {}).items():
+        if not driver_name:
+            continue
+        for lap_no, lap_time_s in (laps_by_no or {}).items():
+            try:
+                lap_idx = int(lap_no)
+                lap_time = float(lap_time_s)
+            except (TypeError, ValueError):
+                continue
+            if lap_idx <= 0 or not np.isfinite(lap_time) or lap_time <= 0:
+                continue
+            lap_timings_by_lap.setdefault(lap_idx, {})[driver_name] = lap_time
+
+    rows = reconstruct_positions_from_lap_times(lap_timings_by_lap, target_laps)
+    rows = canonicalize_position_rows(rows, session_driver_names)
+    if not rows:
+        return _empty_positions_payload(round_payload, season, round_no, normalized_session)
+
+    grid_order: list[tuple[str, int]] = []
+    if normalized_session == "sprint":
+        sprint_grid_rows = round_payload.get("sprint_qualifying") or []
+        for row in sprint_grid_rows:
+            driver_name = row.get("driver")
+            if not driver_name:
+                continue
+            try:
+                grid = int(row.get("position", 999) or 999)
+            except (TypeError, ValueError):
+                grid = 999
+            grid_order.append((driver_name, grid))
+    else:
+        for row in session_rows or []:
+            driver_name = row.get("driver")
+            if not driver_name:
+                continue
+            try:
+                grid = int(row.get("grid", 0) or 0)
+            except (TypeError, ValueError):
+                grid = 0
+            if grid <= 0:
+                try:
+                    grid = int(row.get("position", 999) or 999)
+                except (TypeError, ValueError):
+                    grid = 999
+            grid_order.append((driver_name, grid))
+    grid_order.sort(key=lambda item: (item[1], item[0]))
+
+    max_position = 0
+    for row in rows:
+        for driver_name, position in row.items():
+            if driver_name == "lap" or not isinstance(position, int):
+                continue
+            max_position = max(max_position, position)
+
+    if grid_order:
+        lap0 = {"lap": 0}
+        for idx, (driver_name, _) in enumerate(grid_order, start=1):
+            lap0[driver_name] = idx
+        rows = [lap0, *rows]
+        max_position = max(max_position, len(grid_order))
+
+    lap1 = rows[1] if len(rows) > 1 and rows[0].get("lap") == 0 else (rows[0] if rows else {})
+    started_drivers = [
+        driver_name
+        for driver_name, pos in sorted(
+            ((k, v) for k, v in lap1.items() if k != "lap" and isinstance(v, int)),
+            key=lambda item: (item[1], item[0]),
+        )
+    ]
+    finish_order = [r["driver"] for r in sorted(session_rows or [], key=lambda x: int(x.get("position", 999) or 999)) if r.get("driver")]
+    drivers_in_finish_order: list[str] = []
+    seen: set[str] = set()
+    for name in started_drivers + finish_order:
+        if name in seen:
+            continue
+        seen.add(name)
+        drivers_in_finish_order.append(name)
+
+    completed_laps_by_driver: dict[str, int] = {}
+    for driver_name, laps_by_no in (lap_times_by_driver or {}).items():
+        canonical_name = resolve_canonical_driver_name(driver_name, session_driver_names) or driver_name
+        if not canonical_name:
+            continue
+        completed_laps = max((int(lap_no) for lap_no in (laps_by_no or {}).keys()), default=0)
+        completed_laps_by_driver[canonical_name] = max(
+            completed_laps,
+            int(completed_laps_by_driver.get(canonical_name, 0) or 0),
+        )
+
+    return {
+        "season": season,
+        "round": round_no,
+        "race": round_payload.get("race"),
+        "session": normalized_session,
+        "drivers": [
+            {"driver": driver, "team": driver_team_map.get(driver)}
+            for driver in drivers_in_finish_order
+        ],
+        "laps": rows,
+        "max_position": max_position or len(drivers_in_finish_order),
+        "dnf_drivers": [
+            r["driver"]
+            for r in session_rows or []
+            if r.get("driver") and not (
+                is_classified_finisher_status(r.get("status"))
+                or (normalized_session == "sprint" and not str(r.get("status") or "").strip())
+            )
+        ],
+        "completed_laps_by_driver": completed_laps_by_driver,
+        "source": source,
+    }
 
 
 def warm_positions_for_season(season: int, rounds: list[int] | None = None) -> list[dict]:
@@ -2548,6 +2754,7 @@ def _empty_positions_payload(round_payload: dict, season: int, round_no: int, se
         "drivers": [],
         "laps": [],
         "dnf_drivers": [],
+        "completed_laps_by_driver": {},
         "source": "unavailable",
     }
 
@@ -2596,7 +2803,24 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
             driver_team_map.setdefault(result["driver"], result.get("team"))
 
         if normalized_session == "sprint":
-            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
+            openf1_lap_times, openf1_max_lap = load_openf1_lap_times_by_driver(season, round_payload, normalized_session)
+            total_laps = target_laps or openf1_max_lap
+            if not openf1_lap_times or total_laps <= 0:
+                return _empty_positions_payload(round_payload, season, round_no, normalized_session)
+            payload = _build_positions_from_lap_times(
+                round_payload=round_payload,
+                season=season,
+                round_no=round_no,
+                session_kind=normalized_session,
+                session_rows=session_rows or [],
+                driver_team_map=driver_team_map,
+                lap_times_by_driver=openf1_lap_times,
+                target_laps=total_laps,
+                source="openf1",
+            )
+            POSITIONS_CACHE[key] = payload
+            save_positions_to_disk(payload)
+            return payload
 
         first_page = fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=100, offset=0)
         first_mr = first_page.get("MRData", {})
@@ -2640,7 +2864,24 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
 
         laps = [lap_map[n] for n in sorted(lap_map.keys())]
         if not laps:
-            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
+            openf1_lap_times, openf1_max_lap = load_openf1_lap_times_by_driver(season, round_payload, normalized_session)
+            total_laps = target_laps or openf1_max_lap
+            if not openf1_lap_times or total_laps <= 0:
+                return _empty_positions_payload(round_payload, season, round_no, normalized_session)
+            payload = _build_positions_from_lap_times(
+                round_payload=round_payload,
+                season=season,
+                round_no=round_no,
+                session_kind=normalized_session,
+                session_rows=session_rows or [],
+                driver_team_map=driver_team_map,
+                lap_times_by_driver=openf1_lap_times,
+                target_laps=total_laps,
+                source="openf1",
+            )
+            POSITIONS_CACHE[key] = payload
+            save_positions_to_disk(payload)
+            return payload
 
         if target_laps > 0:
             normalized = []
@@ -2734,6 +2975,13 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
                 for r in session_rows or []
                 if not is_classified_finisher_status(r.get("status"))
             ],
+            "completed_laps_by_driver": {
+                driver_name: max(
+                    (int(lap_no) for lap_no, lap_values in lap_timing_seconds.items() if driver_name in (lap_values or {})),
+                    default=0,
+                )
+                for driver_name in driver_team_map.keys()
+            },
             "source": "jolpica",
         }
         POSITIONS_CACHE[key] = payload
@@ -2876,8 +3124,6 @@ def engineering_round_telemetry_trace(
         raise HTTPException(status_code=404, detail="Telemetry driver payload unavailable.")
 
     available_laps = [int(x) for x in driver_entry.get("laps", []) if isinstance(x, int) and int(x) > 0]
-    if not available_laps:
-        raise HTTPException(status_code=404, detail="No laps available for selected telemetry driver.")
 
     round_payload = get_round_payload(season, round_no)
     requested_lap = str(lap or "").strip().lower()
