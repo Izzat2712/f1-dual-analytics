@@ -497,25 +497,46 @@ def repair_cached_positions_payload(
         [row for row in (payload.get("laps") or []) if isinstance(row, dict)],
         session_driver_names,
     )
-    if normalized_laps and all(int(row.get("lap", -1) or -1) != 0 for row in normalized_laps):
-        grid_order = []
-        for row in normalized_session_rows:
+    grid_order = []
+    for row in normalized_session_rows:
+        try:
+            grid = int(row.get("grid", 0) or 0)
+        except (TypeError, ValueError):
+            grid = 0
+        if grid <= 0:
             try:
-                grid = int(row.get("grid", 0) or 0)
+                grid = int(row.get("position", 999) or 999)
             except (TypeError, ValueError):
-                grid = 0
-            if grid <= 0:
-                try:
-                    grid = int(row.get("position", 999) or 999)
-                except (TypeError, ValueError):
-                    grid = 999
-            grid_order.append((row["driver"], grid))
-        grid_order.sort(key=lambda item: (item[1], item[0]))
-        if grid_order:
-            lap0 = {"lap": 0}
-            for idx, (driver_name, _) in enumerate(grid_order, start=1):
-                lap0[driver_name] = idx
+                grid = 999
+        grid_order.append((row["driver"], grid))
+    grid_order.sort(key=lambda item: (item[1], item[0]))
+    if grid_order:
+        lap0 = {"lap": 0}
+        for idx, (driver_name, _) in enumerate(grid_order, start=1):
+            lap0[driver_name] = idx
+        first_lap_value = normalized_laps[0].get("lap") if normalized_laps else None
+        try:
+            first_lap_no = int(first_lap_value) if first_lap_value is not None else -1
+        except (TypeError, ValueError):
+            first_lap_no = -1
+        if normalized_laps and first_lap_no == 0:
+            normalized_laps[0] = lap0
+        else:
             normalized_laps = [lap0, *normalized_laps]
+
+    deduped_laps: list[dict] = []
+    seen_laps: set[int] = set()
+    for row in normalized_laps:
+        raw_lap_value = row.get("lap")
+        try:
+            lap_no = int(raw_lap_value) if raw_lap_value is not None else -1
+        except (TypeError, ValueError):
+            continue
+        if lap_no in seen_laps:
+            continue
+        seen_laps.add(lap_no)
+        deduped_laps.append(row)
+    normalized_laps = deduped_laps
 
     team_by_driver = {row["driver"]: row.get("team") for row in normalized_session_rows}
     completed_laps_by_driver: dict[str, int] = {}
