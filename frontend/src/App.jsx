@@ -1492,10 +1492,9 @@ function EngineeringPanel({ roundNo, season, race }) {
     }
     setTelemetrySelections((current) => {
       const next = {};
-      TELEMETRY_CARDS.forEach((card, idx) => {
+      TELEMETRY_CARDS.forEach((card) => {
         const existing = current?.[card.key] || {};
-        const fallbackDriver = idx === 0 ? (drivers[0] || "") : "";
-        const chosenDriver = drivers.includes(existing.driver) ? existing.driver : fallbackDriver;
+        const chosenDriver = drivers.includes(existing.driver) ? existing.driver : "";
         next[card.key] = {
           driver: chosenDriver,
           lap: existing.lap || "fastest",
@@ -1598,6 +1597,7 @@ function EngineeringPanel({ roundNo, season, race }) {
 
   useEffect(() => {
     setTelemetrySession("race");
+    setTelemetrySelections({});
     setTelemetryTraces({});
     setTelemetryCardLoading({});
     telemetryFetchSignatureRef.current = {};
@@ -2381,7 +2381,11 @@ function EngineeringPanel({ roundNo, season, race }) {
                   >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="lap" />
-                    <YAxis domain={["auto", "auto"]} />
+                    <YAxis
+                      domain={["auto", "auto"]}
+                      width={84}
+                      tickFormatter={(value) => formatLapTimeSeconds(value)}
+                    />
                     <Tooltip
                       content={(
                         <H2HLapTimesTooltip

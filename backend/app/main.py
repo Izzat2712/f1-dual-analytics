@@ -474,6 +474,106 @@ def canonicalize_position_rows(
     return normalized_rows
 
 
+def repair_cached_positions_payload(
+    payload: dict,
+    round_payload: dict,
+    session_kind: str = "race",
+) -> dict:
+    normalized_session = str(session_kind or "race").strip().lower()
+    if normalized_session not in {"race", "sprint"}:
+        normalized_session = "race"
+
+    session_rows = round_payload.get("sprint") if normalized_session == "sprint" else round_payload.get("results")
+    normalized_session_rows = [row for row in (session_rows or []) if row.get("driver")]
+    session_driver_names = {
+        normalize_driver_name_key(row.get("driver")): row.get("driver")
+        for row in normalized_session_rows
+        if row.get("driver")
+    }
+    if not session_driver_names:
+        return payload
+
+    normalized_laps = canonicalize_position_rows(
+        [row for row in (payload.get("laps") or []) if isinstance(row, dict)],
+        session_driver_names,
+    )
+    if normalized_laps and all(int(row.get("lap", -1) or -1) != 0 for row in normalized_laps):
+        grid_order = []
+        for row in normalized_session_rows:
+            try:
+                grid = int(row.get("grid", 0) or 0)
+            except (TypeError, ValueError):
+                grid = 0
+            if grid <= 0:
+                try:
+                    grid = int(row.get("position", 999) or 999)
+                except (TypeError, ValueError):
+                    grid = 999
+            grid_order.append((row["driver"], grid))
+        grid_order.sort(key=lambda item: (item[1], item[0]))
+        if grid_order:
+            lap0 = {"lap": 0}
+            for idx, (driver_name, _) in enumerate(grid_order, start=1):
+                lap0[driver_name] = idx
+            normalized_laps = [lap0, *normalized_laps]
+
+    team_by_driver = {row["driver"]: row.get("team") for row in normalized_session_rows}
+    completed_laps_by_driver: dict[str, int] = {}
+    for driver_name, lap_count in (payload.get("completed_laps_by_driver") or {}).items():
+        canonical = resolve_canonical_driver_name(driver_name, session_driver_names) or driver_name
+        try:
+            lap_value = int(lap_count or 0)
+        except (TypeError, ValueError):
+            continue
+        completed_laps_by_driver[canonical] = max(completed_laps_by_driver.get(canonical, 0), lap_value)
+    for row in normalized_session_rows:
+        completed_laps_by_driver.setdefault(row["driver"], 0)
+
+    drivers = []
+    seen_drivers = set()
+    for item in payload.get("drivers") or []:
+        if not isinstance(item, dict):
+            continue
+        canonical = resolve_canonical_driver_name(item.get("driver"), session_driver_names)
+        if not canonical or canonical in seen_drivers:
+            continue
+        seen_drivers.add(canonical)
+        drivers.append({"driver": canonical, "team": team_by_driver.get(canonical) or item.get("team")})
+    for row in normalized_session_rows:
+        driver_name = row["driver"]
+        if driver_name in seen_drivers:
+            continue
+        seen_drivers.add(driver_name)
+        drivers.append({"driver": driver_name, "team": team_by_driver.get(driver_name)})
+
+    max_position = 0
+    try:
+        max_position = int(payload.get("max_position", 0) or 0)
+    except (TypeError, ValueError):
+        max_position = 0
+    for row in normalized_laps:
+        for key, value in row.items():
+            if key == "lap":
+                continue
+            if isinstance(value, int):
+                max_position = max(max_position, value)
+    max_position = max(max_position, len(drivers))
+
+    return {
+        **payload,
+        "session": normalized_session,
+        "drivers": drivers,
+        "laps": normalized_laps,
+        "max_position": max_position,
+        "dnf_drivers": [
+            row["driver"]
+            for row in normalized_session_rows
+            if not is_classified_finisher_status(row.get("status"))
+        ],
+        "completed_laps_by_driver": completed_laps_by_driver,
+    }
+
+
 def reconstruct_positions_from_lap_times(
     lap_timings: dict[int, dict[str, float]],
     target_laps: int,
@@ -2764,17 +2864,22 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
     if normalized_session not in {"race", "sprint"}:
         normalized_session = "race"
     key = (season, round_no, normalized_session)
-    cached = POSITIONS_CACHE.get(key)
-    if cached and str(cached.get("source", "")).lower() != "synthetic":
-        return cached
-    disk = load_positions_from_disk(season, round_no, normalized_session)
-    if disk is not None and str(disk.get("source", "")).lower() != "synthetic":
-        POSITIONS_CACHE[key] = disk
-        return disk
-
     round_payload = get_round_payload(season, round_no)
     race = round_payload.get("race")
     session_rows = round_payload.get("sprint") if normalized_session == "sprint" else round_payload.get("results")
+
+    cached = POSITIONS_CACHE.get(key)
+    if cached and str(cached.get("source", "")).lower() != "synthetic":
+        repaired_cached = repair_cached_positions_payload(cached, round_payload, normalized_session)
+        POSITIONS_CACHE[key] = repaired_cached
+        return repaired_cached
+    disk = load_positions_from_disk(season, round_no, normalized_session)
+    if disk is not None and str(disk.get("source", "")).lower() != "synthetic":
+        repaired_disk = repair_cached_positions_payload(disk, round_payload, normalized_session)
+        POSITIONS_CACHE[key] = repaired_disk
+        if repaired_disk != disk:
+            save_positions_to_disk(repaired_disk)
+        return repaired_disk
 
     try:
         raw_results = load_official_results_rows(season, round_no, normalized_session)
