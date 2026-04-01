@@ -51,6 +51,82 @@ PRESEASON_2026_CONSTRUCTOR_STANDINGS = [
     "Cadillac",
 ]
 
+POWER_UNIT_MAPS: dict[int, dict[str, str]] = {
+    2021: {
+        "Mercedes": "Mercedes",
+        "McLaren": "Mercedes",
+        "Aston Martin": "Mercedes",
+        "Williams": "Mercedes",
+        "Red Bull": "Honda",
+        "AlphaTauri": "Honda",
+        "Ferrari": "Ferrari",
+        "Alfa Romeo": "Ferrari",
+        "Haas F1 Team": "Ferrari",
+        "Alpine F1 Team": "Renault",
+    },
+    2022: {
+        "Mercedes": "Mercedes",
+        "McLaren": "Mercedes",
+        "Aston Martin": "Mercedes",
+        "Williams": "Mercedes",
+        "Red Bull": "Honda RBPT",
+        "AlphaTauri": "Honda RBPT",
+        "Ferrari": "Ferrari",
+        "Alfa Romeo": "Ferrari",
+        "Haas F1 Team": "Ferrari",
+        "Alpine F1 Team": "Renault",
+    },
+    2023: {
+        "Mercedes": "Mercedes",
+        "McLaren": "Mercedes",
+        "Aston Martin": "Mercedes",
+        "Williams": "Mercedes",
+        "Red Bull": "Honda RBPT",
+        "AlphaTauri": "Honda RBPT",
+        "Ferrari": "Ferrari",
+        "Alfa Romeo": "Ferrari",
+        "Haas F1 Team": "Ferrari",
+        "Alpine F1 Team": "Renault",
+    },
+    2024: {
+        "Mercedes": "Mercedes",
+        "McLaren": "Mercedes",
+        "Aston Martin": "Mercedes",
+        "Williams": "Mercedes",
+        "Red Bull": "Honda RBPT",
+        "RB F1 Team": "Honda RBPT",
+        "Ferrari": "Ferrari",
+        "Sauber": "Ferrari",
+        "Haas F1 Team": "Ferrari",
+        "Alpine F1 Team": "Renault",
+    },
+    2025: {
+        "Mercedes": "Mercedes",
+        "McLaren": "Mercedes",
+        "Aston Martin": "Mercedes",
+        "Williams": "Mercedes",
+        "Red Bull": "Honda RBPT",
+        "RB F1 Team": "Honda RBPT",
+        "Ferrari": "Ferrari",
+        "Sauber": "Ferrari",
+        "Haas F1 Team": "Ferrari",
+        "Alpine F1 Team": "Renault",
+    },
+    2026: {
+        "Mercedes": "Mercedes",
+        "McLaren": "Mercedes",
+        "Williams": "Mercedes",
+        "Ferrari": "Ferrari",
+        "Haas F1 Team": "Ferrari",
+        "Cadillac": "Ferrari",
+        "Red Bull": "Red Bull Ford",
+        "RB F1 Team": "Red Bull Ford",
+        "Aston Martin": "Honda",
+        "Audi": "Audi",
+        "Alpine F1 Team": "Mercedes",
+    },
+}
+
 
 def fetch(path: str, **query: str | int) -> dict:
     global _LAST_FETCH_TS
@@ -101,6 +177,13 @@ def normalize_constructor_name(season: int, constructor_name: str | None) -> str
     if "cadillac" in lowered:
         return "Cadillac"
     return normalized
+
+
+def power_unit_for_team(season: int, team_name: str | None) -> str | None:
+    normalized_team = normalize_constructor_name(season, team_name)
+    if not normalized_team:
+        return None
+    return POWER_UNIT_MAPS.get(season, {}).get(normalized_team)
 
 
 def season_file(season: int) -> Path:
@@ -271,6 +354,82 @@ def ensure_preseason_standings(data: dict) -> bool:
         for team in data.get("progression_constructors", []):
             row.setdefault(team, 0.0)
 
+    return changed
+
+
+def ensure_power_unit_data(data: dict) -> bool:
+    season = int(data.get("season", 0) or 0)
+    constructor_rows = data.get("constructor_standings", []) or []
+    progression_constructors = data.get("progression_constructors", []) or [
+        row.get("team") for row in constructor_rows if row.get("team")
+    ]
+    constructor_progression = data.get("constructor_points_progression", []) or []
+
+    constructor_power_units = []
+    current_totals: dict[str, float] = {}
+    for row in constructor_rows:
+        team = row.get("team")
+        power_unit = power_unit_for_team(season, team)
+        if not team or not power_unit:
+            continue
+        constructor_power_units.append({"team": team, "power_unit": power_unit})
+        current_totals[power_unit] = round(current_totals.get(power_unit, 0.0) + float(row.get("points", 0.0) or 0.0), 1)
+
+    power_unit_points_progression = []
+    for row in constructor_progression:
+        power_unit_row = {"round": parse_int(row.get("round"))}
+        aggregated: dict[str, float] = {}
+        for team in progression_constructors:
+            power_unit = power_unit_for_team(season, team)
+            if not power_unit:
+                continue
+            points = float(row.get(team, 0.0) or 0.0)
+            aggregated[power_unit] = round(aggregated.get(power_unit, 0.0) + points, 1)
+        for power_unit, points in aggregated.items():
+            power_unit_row[power_unit] = points
+        power_unit_points_progression.append(power_unit_row)
+
+    progression_power_units = sorted(
+        current_totals,
+        key=lambda item: (-current_totals[item], item),
+    )
+
+    if not progression_power_units:
+        seen_power_units: set[str] = set()
+        for team in progression_constructors:
+            power_unit = power_unit_for_team(season, team)
+            if not power_unit or power_unit in seen_power_units:
+                continue
+            seen_power_units.add(power_unit)
+            progression_power_units.append(power_unit)
+
+    for row in power_unit_points_progression:
+        for power_unit in progression_power_units:
+            row.setdefault(power_unit, 0.0)
+
+    power_unit_standings = [
+        {
+            "position": idx,
+            "power_unit": power_unit,
+            "points": round(current_totals.get(power_unit, 0.0), 1),
+            "teams": [item["team"] for item in constructor_power_units if item["power_unit"] == power_unit],
+        }
+        for idx, power_unit in enumerate(progression_power_units, start=1)
+    ]
+
+    changed = False
+    if data.get("constructor_power_units") != constructor_power_units:
+        data["constructor_power_units"] = constructor_power_units
+        changed = True
+    if data.get("progression_power_units") != progression_power_units:
+        data["progression_power_units"] = progression_power_units
+        changed = True
+    if data.get("power_unit_points_progression") != power_unit_points_progression:
+        data["power_unit_points_progression"] = power_unit_points_progression
+        changed = True
+    if data.get("power_unit_standings") != power_unit_standings:
+        data["power_unit_standings"] = power_unit_standings
+        changed = True
     return changed
 
 
@@ -455,6 +614,7 @@ def build_season_dataset(season: int) -> dict:
         "rounds": rounds,
     }
     ensure_preseason_standings(data)
+    ensure_power_unit_data(data)
     align_driver_standings_teams(data)
     ensure_standings_podiums(data)
     validate_dataset(data)
@@ -469,6 +629,7 @@ def load_or_build_season(season: int, force_refresh: bool = False) -> dict:
     if target.exists() and not force_refresh:
         data = json.loads(target.read_text(encoding="utf-8"))
         changed = ensure_preseason_standings(data)
+        changed = ensure_power_unit_data(data) or changed
         changed = align_driver_standings_teams(data) or changed
         changed = ensure_standings_podiums(data) or changed
         validate_dataset(data)

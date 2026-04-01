@@ -11060,5 +11060,249 @@
         "had_sprint": false
       }
     }
+  ],
+  "constructor_power_units": [
+    {
+      "team": "Red Bull",
+      "power_unit": "Honda RBPT"
+    },
+    {
+      "team": "Mercedes",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Ferrari",
+      "power_unit": "Ferrari"
+    },
+    {
+      "team": "McLaren",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Aston Martin",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Alpine F1 Team",
+      "power_unit": "Renault"
+    },
+    {
+      "team": "Williams",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "AlphaTauri",
+      "power_unit": "Honda RBPT"
+    },
+    {
+      "team": "Alfa Romeo",
+      "power_unit": "Ferrari"
+    },
+    {
+      "team": "Haas F1 Team",
+      "power_unit": "Ferrari"
+    }
+  ],
+  "progression_power_units": [
+    "Mercedes",
+    "Honda RBPT",
+    "Ferrari",
+    "Renault"
+  ],
+  "power_unit_points_progression": [
+    {
+      "round": 1,
+      "Honda RBPT": 43.0,
+      "Mercedes": 40.0,
+      "Ferrari": 16.0,
+      "Renault": 2.0
+    },
+    {
+      "round": 2,
+      "Honda RBPT": 87.0,
+      "Mercedes": 77.0,
+      "Ferrari": 31.0,
+      "Renault": 8.0
+    },
+    {
+      "round": 3,
+      "Honda RBPT": 124.0,
+      "Mercedes": 134.0,
+      "Ferrari": 39.0,
+      "Renault": 8.0
+    },
+    {
+      "round": 4,
+      "Honda RBPT": 182.0,
+      "Mercedes": 178.0,
+      "Ferrari": 75.0,
+      "Renault": 8.0
+    },
+    {
+      "round": 5,
+      "Honda RBPT": 226.0,
+      "Mercedes": 213.0,
+      "Ferrari": 92.0,
+      "Renault": 14.0
+    },
+    {
+      "round": 6,
+      "Honda RBPT": 251.0,
+      "Mercedes": 257.0,
+      "Ferrari": 104.0,
+      "Renault": 35.0
+    },
+    {
+      "round": 7,
+      "Honda RBPT": 289.0,
+      "Mercedes": 304.0,
+      "Ferrari": 116.0,
+      "Renault": 40.0
+    },
+    {
+      "round": 8,
+      "Honda RBPT": 323.0,
+      "Mercedes": 345.0,
+      "Ferrari": 139.0,
+      "Renault": 44.0
+    },
+    {
+      "round": 9,
+      "Honda RBPT": 379.0,
+      "Mercedes": 389.0,
+      "Ferrari": 174.0,
+      "Renault": 47.0
+    },
+    {
+      "round": 10,
+      "Honda RBPT": 413.0,
+      "Mercedes": 454.0,
+      "Ferrari": 177.0,
+      "Renault": 47.0
+    },
+    {
+      "round": 11,
+      "Honda RBPT": 454.0,
+      "Mercedes": 505.0,
+      "Ferrari": 187.0,
+      "Renault": 47.0
+    },
+    {
+      "round": 12,
+      "Honda RBPT": 506.0,
+      "Mercedes": 557.0,
+      "Ferrari": 211.0,
+      "Renault": 57.0
+    },
+    {
+      "round": 13,
+      "Honda RBPT": 543.0,
+      "Mercedes": 596.0,
+      "Ferrari": 221.0,
+      "Renault": 73.0
+    },
+    {
+      "round": 14,
+      "Honda RBPT": 586.0,
+      "Mercedes": 626.0,
+      "Ferrari": 249.0,
+      "Renault": 73.0
+    },
+    {
+      "round": 15,
+      "Honda RBPT": 602.0,
+      "Mercedes": 666.0,
+      "Ferrari": 287.0,
+      "Renault": 81.0
+    },
+    {
+      "round": 16,
+      "Honda RBPT": 628.0,
+      "Mercedes": 719.0,
+      "Ferrari": 307.0,
+      "Renault": 84.0
+    },
+    {
+      "round": 17,
+      "Honda RBPT": 662.0,
+      "Mercedes": 798.0,
+      "Ferrari": 326.0,
+      "Renault": 90.0
+    },
+    {
+      "round": 18,
+      "Honda RBPT": 716.0,
+      "Mercedes": 848.0,
+      "Ferrari": 350.0,
+      "Renault": 100.0
+    },
+    {
+      "round": 19,
+      "Honda RBPT": 747.0,
+      "Mercedes": 891.0,
+      "Ferrari": 377.0,
+      "Renault": 101.0
+    },
+    {
+      "round": 20,
+      "Honda RBPT": 803.0,
+      "Mercedes": 953.0,
+      "Ferrari": 390.0,
+      "Renault": 108.0
+    },
+    {
+      "round": 21,
+      "Honda RBPT": 843.0,
+      "Mercedes": 977.0,
+      "Ferrari": 416.0,
+      "Renault": 120.0
+    },
+    {
+      "round": 22,
+      "Honda RBPT": 885.0,
+      "Mercedes": 1019.0,
+      "Ferrari": 434.0,
+      "Renault": 120.0
+    }
+  ],
+  "power_unit_standings": [
+    {
+      "position": 1,
+      "power_unit": "Mercedes",
+      "points": 1019.0,
+      "teams": [
+        "Mercedes",
+        "McLaren",
+        "Aston Martin",
+        "Williams"
+      ]
+    },
+    {
+      "position": 2,
+      "power_unit": "Honda RBPT",
+      "points": 885.0,
+      "teams": [
+        "Red Bull",
+        "AlphaTauri"
+      ]
+    },
+    {
+      "position": 3,
+      "power_unit": "Ferrari",
+      "points": 434.0,
+      "teams": [
+        "Ferrari",
+        "Alfa Romeo",
+        "Haas F1 Team"
+      ]
+    },
+    {
+      "position": 4,
+      "power_unit": "Renault",
+      "points": 120.0,
+      "teams": [
+        "Alpine F1 Team"
+      ]
+    }
   ]
 }

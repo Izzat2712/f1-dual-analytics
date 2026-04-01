@@ -49,6 +49,16 @@ const SEASON_TEAM_COLOR_OVERRIDES = {
   },
 };
 
+const POWER_UNIT_COLORS = {
+  "Mercedes": "#00A19B",
+  "Ferrari": "#E8002D",
+  "Honda": "#1D4ED8",
+  "Honda RBPT": "#2563EB",
+  "Red Bull Ford": "#1634CB",
+  "Renault": "#D4A017",
+  "Audi": "#6B7280",
+};
+
 const TEAM_SLUGS = {
   "McLaren": "mclaren",
   "Red Bull": "red-bull",
@@ -276,6 +286,15 @@ function colorForTeam(teamName, fallback = "#d7263d", season) {
   }
 
   return fallback;
+}
+
+function colorForPowerUnit(powerUnitName, index) {
+  const raw = String(powerUnitName || "").trim();
+  if (!raw) {
+    const fallbackHue = (index * 53) % 360;
+    return `hsl(${fallbackHue} 70% 42%)`;
+  }
+  return POWER_UNIT_COLORS[raw] || `hsl(${(index * 53) % 360} 70% 42%)`;
 }
 
 function driverCode(driverName) {
@@ -801,6 +820,8 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const noDataText = "No data yet for this season/round.";
   const progressionDrivers = overview?.progression_drivers || [];
   const progressionConstructors = overview?.progression_constructors || [];
+  const progressionPowerUnits = overview?.progression_power_units || [];
+  const constructorPowerUnits = overview?.constructor_power_units || [];
   const isSprintWeekend = Boolean(
     race?.summary?.had_sprint
     || (race?.sprint_qualifying?.length || 0) > 0
@@ -810,6 +831,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const [raceSessionTab, setRaceSessionTab] = useState("results");
   const [selectedProgressionDrivers, setSelectedProgressionDrivers] = useState([]);
   const [selectedProgressionConstructors, setSelectedProgressionConstructors] = useState([]);
+  const [selectedProgressionPowerUnits, setSelectedProgressionPowerUnits] = useState([]);
   const driverTeamMap = useMemo(() => {
     const map = {};
     for (const item of overview?.driver_standings || []) {
@@ -831,6 +853,10 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const visibleConstructorProgression = useMemo(
     () => buildVisibleProgressionRows(overview?.constructor_points_progression, latestCompletedRound, progressionConstructors),
     [overview, latestCompletedRound, progressionConstructors]
+  );
+  const visiblePowerUnitProgression = useMemo(
+    () => buildVisibleProgressionRows(overview?.power_unit_points_progression, latestCompletedRound, progressionPowerUnits),
+    [overview, latestCompletedRound, progressionPowerUnits]
   );
   const roundMetaByRound = useMemo(() => {
     const map = {};
@@ -863,8 +889,13 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     () => getProgressionAxisMax(visibleConstructorProgression, progressionConstructors),
     [visibleConstructorProgression, progressionConstructors]
   );
+  const powerUnitProgressionAxisMax = useMemo(
+    () => getProgressionAxisMax(visiblePowerUnitProgression, progressionPowerUnits),
+    [visiblePowerUnitProgression, progressionPowerUnits]
+  );
   const showDriverProgressionDots = visibleDriverProgression.length <= 2;
   const showConstructorProgressionDots = visibleConstructorProgression.length <= 2;
+  const showPowerUnitProgressionDots = visiblePowerUnitProgression.length <= 2;
   const visibleProgressionDrivers = useMemo(() => {
     const selected = new Set(selectedProgressionDrivers);
     return progressionDrivers.filter((driver) => selected.has(driver));
@@ -873,6 +904,28 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     const selected = new Set(selectedProgressionConstructors);
     return progressionConstructors.filter((team) => selected.has(team));
   }, [progressionConstructors, selectedProgressionConstructors]);
+  const visibleProgressionPowerUnits = useMemo(() => {
+    const selected = new Set(selectedProgressionPowerUnits);
+    return progressionPowerUnits.filter((powerUnit) => selected.has(powerUnit));
+  }, [progressionPowerUnits, selectedProgressionPowerUnits]);
+  const powerUnitTeamGroups = useMemo(() => {
+    const grouped = {};
+    for (const item of constructorPowerUnits) {
+      const powerUnit = String(item?.power_unit || "").trim();
+      const team = String(item?.team || "").trim();
+      if (!powerUnit || !team) continue;
+      if (!grouped[powerUnit]) {
+        grouped[powerUnit] = [];
+      }
+      if (!grouped[powerUnit].includes(team)) {
+        grouped[powerUnit].push(team);
+      }
+    }
+    return progressionPowerUnits.map((powerUnit) => ({
+      powerUnit,
+      teams: grouped[powerUnit] || [],
+    }));
+  }, [constructorPowerUnits, progressionPowerUnits]);
 
   useEffect(() => {
     setSprintSessionTab("results");
@@ -886,6 +939,10 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   useEffect(() => {
     setSelectedProgressionConstructors(progressionConstructors);
   }, [progressionConstructors]);
+
+  useEffect(() => {
+    setSelectedProgressionPowerUnits(progressionPowerUnits);
+  }, [progressionPowerUnits]);
 
   const toggleProgressionDriver = (driver) => {
     setSelectedProgressionDrivers((current) => (
@@ -903,10 +960,20 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     ));
   };
 
+  const toggleProgressionPowerUnit = (powerUnit) => {
+    setSelectedProgressionPowerUnits((current) => (
+      current.includes(powerUnit)
+        ? current.filter((item) => item !== powerUnit)
+        : [...current, powerUnit]
+    ));
+  };
+
   const selectAllProgressionDrivers = () => setSelectedProgressionDrivers(progressionDrivers);
   const clearAllProgressionDrivers = () => setSelectedProgressionDrivers([]);
   const selectAllProgressionConstructors = () => setSelectedProgressionConstructors(progressionConstructors);
   const clearAllProgressionConstructors = () => setSelectedProgressionConstructors([]);
+  const selectAllProgressionPowerUnits = () => setSelectedProgressionPowerUnits(progressionPowerUnits);
+  const clearAllProgressionPowerUnits = () => setSelectedProgressionPowerUnits([]);
 
   return (
     <div className="casual-layout">
@@ -1261,6 +1328,88 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                 stroke={colorForTeam(team, `hsl(${(idx * 47) % 360} 70% 42%)`, overview?.season)}
                 strokeWidth={2}
                 dot={showConstructorProgressionDots ? { r: 3 } : false}
+                connectNulls={false}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="card progression-card">
+        <div className="positions-head">
+          <div>
+            <h3>Power Unit Points Progression ({overview?.season || 2025})</h3>
+            <div className="small">Constructors grouped by power unit supplier and summed round by round.</div>
+            <div className="power-unit-team-legend" aria-label="Power unit to constructor mapping">
+              {powerUnitTeamGroups.map(({ powerUnit, teams }, idx) => {
+                const active = selectedProgressionPowerUnits.includes(powerUnit);
+                return (
+                  <div
+                    key={powerUnit}
+                    className={`power-unit-team-chip ${active ? "active" : "muted"}`}
+                  >
+                    <span
+                      className="power-unit-team-chip-line"
+                      style={{ background: colorForPowerUnit(powerUnit, idx) }}
+                      aria-hidden="true"
+                    />
+                    <span className="power-unit-team-chip-name">{powerUnit}</span>
+                    <span className="power-unit-team-chip-teams">
+                      {teams.length ? teams.join(" · ") : "No mapped teams"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <details className="position-selector">
+            <summary>{visibleProgressionPowerUnits.length ? `${visibleProgressionPowerUnits.length} Power Units` : "No Power Units"}</summary>
+            <div className="position-selector-menu">
+              <div className="position-selector-actions">
+                <button type="button" onClick={selectAllProgressionPowerUnits}>All</button>
+                <button type="button" onClick={clearAllProgressionPowerUnits}>None</button>
+              </div>
+              <div className="position-selector-list">
+                {progressionPowerUnits.map((powerUnit, idx) => {
+                  const checked = selectedProgressionPowerUnits.includes(powerUnit);
+                  return (
+                    <label key={powerUnit}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleProgressionPowerUnit(powerUnit)}
+                      />
+                      <span style={{ color: colorForPowerUnit(powerUnit, idx) }}>{powerUnit}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
+        </div>
+        <ResponsiveContainer width="100%" height={360}>
+          <LineChart data={visiblePowerUnitProgression}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="round"
+              type="number"
+              domain={[1, finalSeasonRound]}
+              ticks={allSeasonRounds}
+              interval={0}
+              allowDecimals={false}
+              height={30}
+              tick={<RoundFlagTick roundMetaByRound={roundMetaByRound} />}
+            />
+            <YAxis domain={[0, powerUnitProgressionAxisMax]} allowDecimals={false} />
+            <Tooltip content={<ConstructorProgressionTooltip roundMetaByRound={roundMetaByRound} />} />
+            {visibleProgressionPowerUnits.map((powerUnit, idx) => (
+              <Line
+                key={powerUnit}
+                type="monotone"
+                dataKey={powerUnit}
+                stroke={colorForPowerUnit(powerUnit, idx)}
+                strokeWidth={2}
+                dot={showPowerUnitProgressionDots ? { r: 3 } : false}
                 connectNulls={false}
               />
             ))}

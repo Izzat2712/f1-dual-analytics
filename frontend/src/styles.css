@@ -964,6 +964,55 @@ thead th {
   font-size: 0.95rem;
 }
 
+.power-unit-team-legend {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.power-unit-team-chip {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.44rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  max-width: 100%;
+  transition: opacity 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.power-unit-team-chip.active {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.power-unit-team-chip.muted {
+  opacity: 0.56;
+}
+
+.power-unit-team-chip-line {
+  width: 18px;
+  height: 3px;
+  border-radius: 999px;
+  margin-top: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.power-unit-team-chip-name {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.power-unit-team-chip-teams {
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -1528,6 +1577,10 @@ thead th {
   .position-selector-menu {
     left: 0;
     right: auto;
+    width: 100%;
+  }
+
+  .power-unit-team-chip {
     width: 100%;
   }
 

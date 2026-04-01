@@ -10116,5 +10116,249 @@
         "had_sprint": false
       }
     }
+  ],
+  "constructor_power_units": [
+    {
+      "team": "Mercedes",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Red Bull",
+      "power_unit": "Honda"
+    },
+    {
+      "team": "Ferrari",
+      "power_unit": "Ferrari"
+    },
+    {
+      "team": "McLaren",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Alpine F1 Team",
+      "power_unit": "Renault"
+    },
+    {
+      "team": "AlphaTauri",
+      "power_unit": "Honda"
+    },
+    {
+      "team": "Aston Martin",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Williams",
+      "power_unit": "Mercedes"
+    },
+    {
+      "team": "Alfa Romeo",
+      "power_unit": "Ferrari"
+    },
+    {
+      "team": "Haas F1 Team",
+      "power_unit": "Ferrari"
+    }
+  ],
+  "progression_power_units": [
+    "Mercedes",
+    "Honda",
+    "Ferrari",
+    "Renault"
+  ],
+  "power_unit_points_progression": [
+    {
+      "round": 1,
+      "Mercedes": 60.0,
+      "Honda": 30.0,
+      "Ferrari": 12.0,
+      "Renault": 0.0
+    },
+    {
+      "round": 2,
+      "Mercedes": 106.0,
+      "Honda": 61.0,
+      "Ferrari": 34.0,
+      "Renault": 3.0
+    },
+    {
+      "round": 3,
+      "Mercedes": 159.0,
+      "Honda": 92.0,
+      "Ferrari": 42.0,
+      "Renault": 13.0
+    },
+    {
+      "round": 4,
+      "Mercedes": 211.0,
+      "Honda": 122.0,
+      "Ferrari": 60.0,
+      "Renault": 15.0
+    },
+    {
+      "round": 5,
+      "Mercedes": 247.0,
+      "Honda": 167.0,
+      "Ferrari": 79.0,
+      "Renault": 17.0
+    },
+    {
+      "round": 6,
+      "Mercedes": 277.0,
+      "Honda": 213.0,
+      "Ferrari": 96.0,
+      "Renault": 25.0
+    },
+    {
+      "round": 7,
+      "Mercedes": 328.0,
+      "Honda": 260.0,
+      "Ferrari": 96.0,
+      "Renault": 29.0
+    },
+    {
+      "round": 8,
+      "Mercedes": 376.0,
+      "Honda": 298.0,
+      "Ferrari": 110.0,
+      "Renault": 31.0
+    },
+    {
+      "round": 9,
+      "Mercedes": 427.0,
+      "Honda": 334.0,
+      "Ferrari": 124.0,
+      "Renault": 32.0
+    },
+    {
+      "round": 10,
+      "Mercedes": 496.0,
+      "Honda": 338.0,
+      "Ferrari": 150.0,
+      "Renault": 40.0
+    },
+    {
+      "round": 11,
+      "Mercedes": 524.0,
+      "Honda": 359.0,
+      "Ferrari": 166.0,
+      "Renault": 77.0
+    },
+    {
+      "round": 12,
+      "Mercedes": 552.5,
+      "Honda": 375.5,
+      "Ferrari": 168.5,
+      "Renault": 80.0
+    },
+    {
+      "round": 13,
+      "Mercedes": 587.5,
+      "Honda": 416.5,
+      "Ferrari": 184.5,
+      "Renault": 90.0
+    },
+    {
+      "round": 14,
+      "Mercedes": 658.5,
+      "Honda": 428.5,
+      "Ferrari": 204.5,
+      "Renault": 95.0
+    },
+    {
+      "round": 15,
+      "Mercedes": 713.5,
+      "Honda": 448.5,
+      "Ferrari": 223.5,
+      "Renault": 103.0
+    },
+    {
+      "round": 16,
+      "Mercedes": 757.5,
+      "Honda": 489.5,
+      "Ferrari": 239.5,
+      "Renault": 104.0
+    },
+    {
+      "round": 17,
+      "Mercedes": 799.5,
+      "Honda": 531.5,
+      "Ferrari": 257.5,
+      "Renault": 104.0
+    },
+    {
+      "round": 18,
+      "Mercedes": 824.5,
+      "Honda": 583.5,
+      "Ferrari": 279.5,
+      "Renault": 106.0
+    },
+    {
+      "round": 19,
+      "Mercedes": 868.5,
+      "Honda": 622.5,
+      "Ferrari": 298.5,
+      "Renault": 112.0
+    },
+    {
+      "round": 20,
+      "Mercedes": 904.5,
+      "Honda": 653.5,
+      "Ferrari": 308.5,
+      "Renault": 137.0
+    },
+    {
+      "round": 21,
+      "Mercedes": 956.5,
+      "Honda": 679.5,
+      "Ferrari": 320.5,
+      "Renault": 149.0
+    },
+    {
+      "round": 22,
+      "Mercedes": 988.5,
+      "Honda": 727.5,
+      "Ferrari": 336.5,
+      "Renault": 155.0
+    }
+  ],
+  "power_unit_standings": [
+    {
+      "position": 1,
+      "power_unit": "Mercedes",
+      "points": 988.5,
+      "teams": [
+        "Mercedes",
+        "McLaren",
+        "Aston Martin",
+        "Williams"
+      ]
+    },
+    {
+      "position": 2,
+      "power_unit": "Honda",
+      "points": 727.5,
+      "teams": [
+        "Red Bull",
+        "AlphaTauri"
+      ]
+    },
+    {
+      "position": 3,
+      "power_unit": "Ferrari",
+      "points": 336.5,
+      "teams": [
+        "Ferrari",
+        "Alfa Romeo",
+        "Haas F1 Team"
+      ]
+    },
+    {
+      "position": 4,
+      "power_unit": "Renault",
+      "points": 155.0,
+      "teams": [
+        "Alpine F1 Team"
+      ]
+    }
   ]
 }
