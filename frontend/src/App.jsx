@@ -464,6 +464,48 @@ function formatCountdownSessionLabel(label) {
   return raw.replace(/^Practice(\s+\d+)?$/i, (_, num = "") => `Free Practice${num}`);
 }
 
+function formatCountdownSessionChipLabel(code, label) {
+  const normalizedCode = String(code || "").trim().toLowerCase();
+  const codeLabels = {
+    practice_1: "FP1",
+    practice_2: "FP2",
+    practice_3: "FP3",
+    sprint_qualifying: "SQ",
+    sprint: "SPR",
+    qualifying: "Q",
+    race: "RACE",
+  };
+  if (codeLabels[normalizedCode]) return codeLabels[normalizedCode];
+
+  const normalizedLabel = formatCountdownSessionLabel(label).trim().toUpperCase();
+  if (normalizedLabel === "QUALIFYING") return "Q";
+  if (normalizedLabel === "RACE") return "RACE";
+  return normalizedLabel || "SESSION";
+}
+
+function formatCountdownSessionChipTime(ts) {
+  if (!Number.isFinite(ts)) {
+    return { date: "-", time: "-" };
+  }
+  try {
+    const date = new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+    }).format(new Date(ts));
+    const time = new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(ts));
+    return { date, time };
+  } catch {
+    const fallback = new Date(ts);
+    return {
+      date: fallback.toLocaleDateString(),
+      time: fallback.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+  }
+}
+
 function isCompletedRoundSummary(summary) {
   if (!summary) return false;
   return Boolean(summary.winner || summary.fastest_lap_driver || summary.pole || summary.sprint_winner);
@@ -576,10 +618,12 @@ function NextSessionCountdown() {
     return targetRound.sessions.find((session) => session.ts > nowMs) || null;
   }, [targetRound, nowMs]);
 
-  const iso2 = countryToIso2(targetRound?.country);
-  const flag = countryToFlagEmoji(targetRound?.country);
+  const displayRound = targetRound || normalizedRounds[normalizedRounds.length - 1] || null;
+  const roundSessions = displayRound?.sessions || [];
+  const iso2 = countryToIso2(displayRound?.country);
+  const flag = countryToFlagEmoji(displayRound?.country);
   const flagImg = iso2 ? `https://flagcdn.com/w40/${iso2.toLowerCase()}.png` : "";
-  const raceName = String(targetRound?.raceName || "Next Race");
+  const raceName = String(displayRound?.raceName || "Next Race");
 
   if (!normalizedRounds.length) {
     return (
@@ -623,6 +667,185 @@ function NextSessionCountdown() {
         {parts.days}d {parts.hours}h {parts.minutes}m {parts.seconds}s
       </div>
       <div className="countdown-local-start">Local start: {formatLocalStart(nextSession.ts)}</div>
+    </div>
+  );
+}
+
+function NextSessionCountdownSplit() {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [scheduleRounds, setScheduleRounds] = useState([]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    getSessionSchedule(2026).then((payload) => {
+      setScheduleRounds(Array.isArray(payload?.rounds) ? payload.rounds : []);
+    }).catch(() => {
+      setScheduleRounds([]);
+    });
+  }, []);
+
+  const normalizedRounds = useMemo(() => {
+    return (scheduleRounds || [])
+      .map((round) => {
+        const roundNumber = Number(round?.round || 0);
+        const sessions = (round?.session_schedule || [])
+          .map((entry) => {
+            const ts = parseSessionTimestamp(entry?.start_utc);
+            if (!Number.isFinite(ts)) return null;
+            return {
+              code: entry?.code || "",
+              label: entry?.label || "Session",
+              ts,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.ts - b.ts);
+
+        return {
+          round: roundNumber,
+          raceName: String(round?.race_name || "Grand Prix"),
+          country: round?.track?.country || "",
+          sessions,
+        };
+      })
+      .filter((round) => round.round > 0 && round.sessions.length > 0)
+      .sort((a, b) => {
+        const aFirst = a.sessions[0]?.ts ?? Number.POSITIVE_INFINITY;
+        const bFirst = b.sessions[0]?.ts ?? Number.POSITIVE_INFINITY;
+        if (aFirst !== bFirst) return aFirst - bFirst;
+        return a.round - b.round;
+      });
+  }, [scheduleRounds]);
+
+  const targetRound = useMemo(() => {
+    let bestRound = null;
+    let bestSessionTs = Number.POSITIVE_INFINITY;
+
+    for (const round of normalizedRounds) {
+      const nextUpcomingSession = round.sessions.find((session) => session.ts > nowMs);
+      if (!nextUpcomingSession) continue;
+      if (nextUpcomingSession.ts < bestSessionTs) {
+        bestSessionTs = nextUpcomingSession.ts;
+        bestRound = round;
+      }
+    }
+
+    return bestRound;
+  }, [normalizedRounds, nowMs]);
+
+  const displayRound = targetRound || normalizedRounds[normalizedRounds.length - 1] || null;
+  const roundSessions = displayRound?.sessions || [];
+  const nextSession = roundSessions.find((session) => session.ts > nowMs) || null;
+  const iso2 = countryToIso2(displayRound?.country);
+  const flag = countryToFlagEmoji(displayRound?.country);
+  const flagImg = iso2 ? `https://flagcdn.com/w40/${iso2.toLowerCase()}.png` : "";
+  const raceName = String(displayRound?.raceName || "Next Race");
+
+  const renderHeader = () => (
+    <div className="countdown-race">
+      {flagImg ? (
+        <img className="countdown-flag-img" src={flagImg} alt={`${displayRound?.country || "Country"} flag`} loading="lazy" />
+      ) : (
+        <span className="countdown-flag">{flag || "F1"}</span>
+      )}
+      <span>{raceName}</span>
+    </div>
+  );
+
+  if (!normalizedRounds.length) {
+    return (
+      <div className="countdown-card countdown-card-split">
+        <div className="countdown-top">
+          {renderHeader()}
+          <div className="countdown-session-strip countdown-session-strip-empty">
+            <div className="countdown-session-empty">Schedule Unavailable</div>
+          </div>
+        </div>
+        <div className="countdown-bottom">
+          <div className="countdown-session">Schedule Unavailable</div>
+          <div className="countdown-time">--d --h --m --s</div>
+          <div className="countdown-local-start">Local start: -</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!nextSession) {
+    return (
+      <div className="countdown-card countdown-card-split">
+        <div className="countdown-top">
+          {renderHeader()}
+          <div className="countdown-session-strip">
+            {roundSessions.map((session) => {
+              const sessionTime = formatCountdownSessionChipTime(session.ts);
+              return (
+                <div
+                  key={`${displayRound?.round || "round"}-${session.code}-${session.ts}`}
+                  className="countdown-session-chip is-complete"
+                >
+                  <div className="countdown-session-chip-label">{formatCountdownSessionChipLabel(session.code, session.label)}</div>
+                  <div className="countdown-session-chip-time">
+                    <span className="countdown-session-chip-date">{sessionTime.date}</span>
+                    <span className="countdown-session-chip-clock">{sessionTime.time}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="countdown-bottom">
+          <div className="countdown-session">Race Weekend Complete</div>
+          <div className="countdown-time">00d 00h 00m 00s</div>
+          <div className="countdown-local-start">Local start: -</div>
+        </div>
+      </div>
+    );
+  }
+
+  const parts = formatCountdownParts(nextSession.ts - nowMs);
+
+  return (
+    <div className="countdown-card countdown-card-split">
+      <div className="countdown-top">
+        {renderHeader()}
+        <div className="countdown-session-strip">
+          {roundSessions.map((session) => {
+            const isComplete = session.ts <= nowMs;
+            const isNext = session.ts === nextSession.ts;
+            const className = [
+              "countdown-session-chip",
+              isComplete ? "is-complete" : "",
+              isNext ? "is-next" : "",
+            ].filter(Boolean).join(" ");
+
+            const sessionTime = formatCountdownSessionChipTime(session.ts);
+
+            return (
+              <div
+                key={`${displayRound?.round || "round"}-${session.code}-${session.ts}`}
+                className={className}
+              >
+                <div className="countdown-session-chip-label">{formatCountdownSessionChipLabel(session.code, session.label)}</div>
+                <div className="countdown-session-chip-time">
+                  <span className="countdown-session-chip-date">{sessionTime.date}</span>
+                  <span className="countdown-session-chip-clock">{sessionTime.time}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="countdown-bottom">
+        <div className="countdown-session">{formatCountdownSessionLabel(nextSession.label).toUpperCase()}</div>
+        <div className="countdown-time">
+          {parts.days}d {parts.hours}h {parts.minutes}m {parts.seconds}s
+        </div>
+        <div className="countdown-local-start">Local start: {formatLocalStart(nextSession.ts)}</div>
+      </div>
     </div>
   );
 }
@@ -816,6 +1039,97 @@ function InfoHint({ label, content }) {
   );
 }
 
+function formatDriverFormMetric(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "-";
+  if (Math.abs(numeric - Math.round(numeric)) < 0.05) return String(Math.round(numeric));
+  return numeric.toFixed(digits);
+}
+
+function getDriverFormResultDisplay(resultRow) {
+  const position = Number(resultRow?.position);
+  const status = String(resultRow?.status || resultRow?.time || "").trim().toUpperCase();
+  if (status.includes("DNS")) return "DNS";
+  if (status.includes("DSQ")) return "DSQ";
+  if (status.includes("DNF") || status.includes("RETIRED")) return "DNF";
+  return Number.isFinite(position) ? `P${position}` : "-";
+}
+
+function getDriverFormResultTone(resultRow) {
+  const position = Number(resultRow?.position);
+  const status = String(resultRow?.status || resultRow?.time || "").trim().toUpperCase();
+  if (status.includes("DNS") || status.includes("DNF") || status.includes("RETIRED") || status.includes("DSQ")) {
+    return "is-bad";
+  }
+  if (position === 1) return "is-win";
+  if (position > 1 && position <= 3) return "is-podium";
+  if (position > 3 && position <= 10) return "is-points";
+  return "is-neutral";
+}
+
+function averageOf(values) {
+  const numericValues = (values || []).filter((value) => Number.isFinite(value));
+  if (!numericValues.length) return null;
+  return numericValues.reduce((sum, value) => sum + value, 0) / numericValues.length;
+}
+
+const DRIVER_FORM_SLOT_COUNT = 6;
+
+function getDriverFormTrend({ recentResults, wins, podiums, avgFinish, avgGain, totalPoints }) {
+  const results = Array.isArray(recentResults) ? recentResults : [];
+  const lastThree = results.slice(-3);
+  const earlierWindow = results.slice(0, Math.max(0, results.length - 3));
+  const lastThreePoints = lastThree.reduce((sum, entry) => sum + (Number(entry?.points) || 0), 0);
+  const earlierPoints = earlierWindow.reduce((sum, entry) => sum + (Number(entry?.points) || 0), 0);
+  const lastThreeAvgFinish = averageOf(lastThree.map((entry) => entry?.finishPosition));
+  const earlierAvgFinish = averageOf(earlierWindow.map((entry) => entry?.finishPosition));
+  const finishImprovement = Number.isFinite(earlierAvgFinish) && Number.isFinite(lastThreeAvgFinish)
+    ? earlierAvgFinish - lastThreeAvgFinish
+    : 0;
+  const pointsImprovement = lastThreePoints - earlierPoints;
+  const lastThreeWins = lastThree.filter((entry) => entry?.finishPosition === 1).length;
+  const lastThreePodiums = lastThree.filter((entry) => Number.isFinite(entry?.finishPosition) && entry.finishPosition <= 3).length;
+  const badLastThree = lastThree.filter((entry) => entry?.tone === "is-bad").length;
+  const pointsFinishesLastThree = lastThree.filter((entry) => Number.isFinite(entry?.finishPosition) && entry.finishPosition <= 10).length;
+
+  if (
+    lastThreeWins >= 1
+    || lastThreePodiums >= 2
+    || (Number.isFinite(lastThreeAvgFinish) && lastThreeAvgFinish <= 4 && lastThreePoints >= 30)
+  ) {
+    return { label: "Hot", tone: "is-hot" };
+  }
+
+  if (
+    badLastThree >= 2
+    || (results.length >= 3 && lastThreePoints === 0)
+    || (Number.isFinite(lastThreeAvgFinish) && lastThreeAvgFinish >= 12 && pointsImprovement <= 0)
+  ) {
+    return { label: "Struggling", tone: "is-struggling" };
+  }
+
+  if (
+    finishImprovement >= 2
+    || pointsImprovement >= 8
+    || ((Number.isFinite(avgGain) && avgGain >= 2) && Number.isFinite(lastThreeAvgFinish) && lastThreeAvgFinish <= 8)
+  ) {
+    return { label: "Rising", tone: "is-rising" };
+  }
+
+  if (
+    (lastThreePoints > 0 && badLastThree === 0)
+    || pointsFinishesLastThree >= 2
+    || totalPoints > 0
+    || (Number.isFinite(avgFinish) && avgFinish <= 10)
+    || wins > 0
+    || podiums > 0
+  ) {
+    return { label: "Steady", tone: "is-steady" };
+  }
+
+  return { label: "Struggling", tone: "is-struggling" };
+}
+
 function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const noDataText = "No data yet for this season/round.";
   const progressionDrivers = overview?.progression_drivers || [];
@@ -832,6 +1146,10 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const [selectedProgressionDrivers, setSelectedProgressionDrivers] = useState([]);
   const [selectedProgressionConstructors, setSelectedProgressionConstructors] = useState([]);
   const [selectedProgressionPowerUnits, setSelectedProgressionPowerUnits] = useState([]);
+  const [driverFormRounds, setDriverFormRounds] = useState([]);
+  const [driverFormLoading, setDriverFormLoading] = useState(false);
+  const [driverFormError, setDriverFormError] = useState("");
+  const [selectedDriverFormSlots, setSelectedDriverFormSlots] = useState([]);
   const driverTeamMap = useMemo(() => {
     const map = {};
     for (const item of overview?.driver_standings || []) {
@@ -881,6 +1199,14 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     [roundMetaByRound]
   );
   const finalSeasonRound = allSeasonRounds.length ? allSeasonRounds[allSeasonRounds.length - 1] : Math.max(latestCompletedRound, 1);
+  const driverFormRoundNumbers = useMemo(() => {
+    return (roundsSummary || [])
+      .filter((item) => isCompletedRoundSummary(item))
+      .map((item) => Number(item?.round))
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => a - b)
+      .slice(-5);
+  }, [roundsSummary]);
   const driverProgressionAxisMax = useMemo(
     () => getProgressionAxisMax(visibleDriverProgression, progressionDrivers),
     [visibleDriverProgression, progressionDrivers]
@@ -944,6 +1270,141 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
     setSelectedProgressionPowerUnits(progressionPowerUnits);
   }, [progressionPowerUnits]);
 
+  useEffect(() => {
+    const availableDrivers = (overview?.driver_standings || []).map((item) => String(item?.driver || "")).filter(Boolean);
+    const defaultSlots = availableDrivers.slice(0, DRIVER_FORM_SLOT_COUNT);
+
+    setSelectedDriverFormSlots((current) => {
+      const next = Array.from({ length: DRIVER_FORM_SLOT_COUNT }, (_, idx) => {
+        const existing = current[idx];
+        if (availableDrivers.includes(existing)) return existing;
+        return defaultSlots[idx] || availableDrivers[0] || "";
+      });
+
+      const unchanged = next.length === current.length && next.every((value, idx) => value === current[idx]);
+      return unchanged ? current : next;
+    });
+  }, [overview?.driver_standings]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const seasonValue = Number(overview?.season || race?.season || 2025);
+    if (!driverFormRoundNumbers.length) {
+      setDriverFormRounds([]);
+      setDriverFormLoading(false);
+      setDriverFormError("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setDriverFormLoading(true);
+    setDriverFormError("");
+
+    Promise.allSettled(
+      driverFormRoundNumbers.map((formRound) => {
+        if (Number(formRound) === Number(roundNo) && Array.isArray(race?.results) && race.results.length) {
+          return Promise.resolve(race);
+        }
+        return getRoundResults(formRound, seasonValue);
+      })
+    ).then((results) => {
+      if (cancelled) return;
+
+      const successfulRounds = results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value)
+        .filter((item) => Array.isArray(item?.results) && item.results.length)
+        .sort((a, b) => Number(a?.round || a?.summary?.round || 0) - Number(b?.round || b?.summary?.round || 0));
+
+      setDriverFormRounds(successfulRounds);
+      setDriverFormError(successfulRounds.length ? "" : "Recent form is unavailable right now.");
+      setDriverFormLoading(false);
+    }).catch(() => {
+      if (cancelled) return;
+      setDriverFormRounds([]);
+      setDriverFormError("Recent form is unavailable right now.");
+      setDriverFormLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [driverFormRoundNumbers, overview?.season, race, roundNo]);
+
+  const driverFormRows = useMemo(() => {
+    return (overview?.driver_standings || []).map((standing) => {
+      const recentResults = driverFormRounds.map((roundItem) => {
+        const resultRow = (roundItem?.results || []).find((entry) => entry?.driver === standing.driver);
+        const qualifyingRow = (roundItem?.qualifying || []).find((entry) => entry?.driver === standing.driver);
+        if (!resultRow) return null;
+
+        const finishPosition = Number(resultRow?.position);
+        const qualifyingPosition = Number(qualifyingRow?.position);
+        const gain = Number.isFinite(finishPosition) && Number.isFinite(qualifyingPosition)
+          ? qualifyingPosition - finishPosition
+          : null;
+
+        return {
+          round: Number(roundItem?.round || roundItem?.summary?.round || 0),
+          display: getDriverFormResultDisplay(resultRow),
+          tone: getDriverFormResultTone(resultRow),
+          finishPosition,
+          gain,
+          points: Number(resultRow?.points || 0),
+        };
+      }).filter(Boolean);
+
+      const finishedPositions = recentResults
+        .map((entry) => entry.finishPosition)
+        .filter((value) => Number.isFinite(value));
+      const gainValues = recentResults
+        .map((entry) => entry.gain)
+        .filter((value) => Number.isFinite(value));
+      const totalPoints = recentResults.reduce((sum, entry) => sum + (Number.isFinite(entry.points) ? entry.points : 0), 0);
+      const wins = recentResults.filter((entry) => entry.finishPosition === 1).length;
+      const podiums = recentResults.filter((entry) => Number.isFinite(entry.finishPosition) && entry.finishPosition <= 3).length;
+      const avgFinish = finishedPositions.length
+        ? finishedPositions.reduce((sum, value) => sum + value, 0) / finishedPositions.length
+        : null;
+      const avgGain = gainValues.length
+        ? gainValues.reduce((sum, value) => sum + value, 0) / gainValues.length
+        : null;
+      const trend = getDriverFormTrend({ recentResults, wins, podiums, avgFinish, avgGain, totalPoints });
+
+      return {
+        driver: standing.driver,
+        team: standing.team,
+        standingPosition: standing.position,
+        recentResults,
+        totalPoints,
+        wins,
+        podiums,
+        avgFinish,
+        avgGain,
+        trend,
+      };
+    });
+  }, [driverFormRounds, overview]);
+
+  const driverFormRowByDriver = useMemo(() => {
+    const map = {};
+    for (const row of driverFormRows) {
+      if (row?.driver) {
+        map[row.driver] = row;
+      }
+    }
+    return map;
+  }, [driverFormRows]);
+
+  const driverFormDisplayRows = useMemo(() => {
+    return selectedDriverFormSlots.map((driverName, index) => ({
+      slot: index,
+      driverName,
+      row: driverFormRowByDriver[driverName] || null,
+    }));
+  }, [selectedDriverFormSlots, driverFormRowByDriver]);
+
   const toggleProgressionDriver = (driver) => {
     setSelectedProgressionDrivers((current) => (
       current.includes(driver)
@@ -974,9 +1435,114 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const clearAllProgressionConstructors = () => setSelectedProgressionConstructors([]);
   const selectAllProgressionPowerUnits = () => setSelectedProgressionPowerUnits(progressionPowerUnits);
   const clearAllProgressionPowerUnits = () => setSelectedProgressionPowerUnits([]);
+  const updateDriverFormSlot = (slotIndex, driverName) => {
+    setSelectedDriverFormSlots((current) => current.map((item, idx) => (idx === slotIndex ? driverName : item)));
+  };
 
   return (
     <div className="casual-layout">
+      <div className="card driver-form-card">
+        <div className="card-title-row">
+          <div>
+            <h3>Driver Form Tracker</h3>
+            <div className="small">
+              Defaults to the current top 6. Each card can be changed to any driver across the last {driverFormRoundNumbers.length || 0} completed rounds.
+            </div>
+          </div>
+          <InfoHint
+            label="How driver form is calculated"
+            content="Recent form blends last-five race finishes, points scored, and positions gained from qualifying to the flag. This is a quick-read momentum card, not a predictive model."
+          />
+        </div>
+
+        {driverFormLoading ? (
+          <div className="driver-form-empty">Loading recent form...</div>
+        ) : driverFormError ? (
+          <div className="driver-form-empty">{driverFormError}</div>
+        ) : driverFormRows.length ? (
+          <div className="driver-form-grid">
+            {driverFormDisplayRows.map(({ slot, driverName, row }) => (
+              <article key={`driver-form-slot-${slot}`} className="driver-form-item">
+                <div className="driver-form-head">
+                  <div className="driver-form-identity">
+                    {row ? (
+                      <div className="driver-form-avatar">
+                        <DriverAvatar
+                          driverName={row.driver}
+                          season={overview?.season || race?.season || 2025}
+                          roundNo={roundNo}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="driver-form-main">
+                      <div className="driver-form-name-row">
+                        {row ? <span className="driver-form-standing">P{row.standingPosition}</span> : null}
+                        <span className="driver-form-name">{row?.driver || driverName || "Select driver"}</span>
+                      </div>
+                      <div className="driver-form-selector-wrap">
+                        <select
+                          className="driver-form-selector"
+                          value={driverName || ""}
+                          onChange={(e) => updateDriverFormSlot(slot, e.target.value)}
+                        >
+                          {(overview?.driver_standings || []).map((driver) => (
+                            <option key={driver.driver} value={driver.driver}>
+                              P{driver.position} - {driver.driver}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="driver-form-meta-row">
+                        <div className="small">{row?.team || "-"}</div>
+                        {row ? <span className={`driver-form-badge ${row.trend.tone}`}>{row.trend.label}</span> : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="driver-form-finishes">
+                  {row?.recentResults?.length ? row.recentResults.map((entry) => (
+                    <span
+                      key={`${row.driver}-${entry.round}`}
+                      className={`driver-form-finish-chip ${entry.tone}`}
+                      title={`Round ${entry.round}: ${entry.display}`}
+                    >
+                      {entry.display}
+                    </span>
+                  )) : (
+                    <span className="driver-form-finish-chip is-neutral">-</span>
+                  )}
+                </div>
+
+                <div className="driver-form-stats">
+                  <div className="driver-form-stat">
+                    <span className="driver-form-stat-label">Avg finish</span>
+                    <strong>{formatDriverFormMetric(row?.avgFinish)}</strong>
+                  </div>
+                  <div className="driver-form-stat">
+                    <span className="driver-form-stat-label">Quali delta</span>
+                    <strong className={Number(row?.avgGain) > 0 ? "driver-form-positive" : (Number(row?.avgGain) < 0 ? "driver-form-negative" : "")}>
+                      {Number.isFinite(row?.avgGain) ? `${row.avgGain > 0 ? "+" : ""}${formatDriverFormMetric(row.avgGain)}` : "-"}
+                    </strong>
+                  </div>
+                  <div className="driver-form-stat">
+                    <span className="driver-form-stat-label">Recent pts</span>
+                    <strong>{formatDriverFormMetric(row?.totalPoints, 0)}</strong>
+                  </div>
+                </div>
+
+                <div className="driver-form-footer">
+                  <span>{formatDriverFormMetric(row?.wins, 0)} wins</span>
+                  <span>{formatDriverFormMetric(row?.podiums, 0)} podiums</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="driver-form-empty">No recent form data yet.</div>
+        )}
+      </div>
+
       <div className={`top-grid ${isSprintWeekend ? "sprint-weekend" : ""}`}>
         <div className="card top-card driver-card">
         <h3>Driver Standings</h3>
@@ -2974,7 +3540,7 @@ export default function App() {
               </div>
             </div>
           </div>
-          <NextSessionCountdown />
+          <NextSessionCountdownSplit />
         </div>
       </section>
 
