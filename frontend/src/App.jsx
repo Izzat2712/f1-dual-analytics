@@ -99,6 +99,30 @@ const TELEMETRY_CARDS = [
   { key: "rpm", title: "RPM", dataKey: "rpm", color: "#a78bfa", unit: "rpm" },
 ];
 
+const SUPPORTED_SEASON_MIN = 2021;
+const SUPPORTED_SEASON_MAX = 2026;
+
+function useDidUpdateEffect(effect, deps) {
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return undefined;
+    }
+    return effect();
+  }, deps);
+}
+
+function sanitizeSeasonValue(value, fallback = 2026) {
+  const parsed = Number.parseInt(String(value || "").trim(), 10);
+  if (!parsed) return fallback;
+  if (parsed < SUPPORTED_SEASON_MIN || parsed > SUPPORTED_SEASON_MAX) {
+    return fallback;
+  }
+  return parsed;
+}
+
 const DRIVER_PHOTO_SLUGS = {
   "alexander albon": "albon",
   "andrea kimi antonelli": "antonelli",
@@ -1150,6 +1174,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   const [driverFormLoading, setDriverFormLoading] = useState(false);
   const [driverFormError, setDriverFormError] = useState("");
   const [selectedDriverFormSlots, setSelectedDriverFormSlots] = useState([]);
+  const previousDriverFormSeasonRef = useRef(null);
   const driverTeamMap = useMemo(() => {
     const map = {};
     for (const item of overview?.driver_standings || []) {
@@ -1273,9 +1298,19 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
   useEffect(() => {
     const availableDrivers = (overview?.driver_standings || []).map((item) => String(item?.driver || "")).filter(Boolean);
     const defaultSlots = availableDrivers.slice(0, DRIVER_FORM_SLOT_COUNT);
+    const currentDriverFormSeason = Number(overview?.season || race?.season || 0);
+    const hasSeason = Number.isFinite(currentDriverFormSeason) && currentDriverFormSeason > 0;
+    const seasonChanged = hasSeason && previousDriverFormSeasonRef.current !== currentDriverFormSeason;
+
+    if (hasSeason) {
+      previousDriverFormSeasonRef.current = currentDriverFormSeason;
+    }
 
     setSelectedDriverFormSlots((current) => {
       const next = Array.from({ length: DRIVER_FORM_SLOT_COUNT }, (_, idx) => {
+        if (seasonChanged) {
+          return defaultSlots[idx] || availableDrivers[0] || "";
+        }
         const existing = current[idx];
         if (availableDrivers.includes(existing)) return existing;
         return defaultSlots[idx] || availableDrivers[0] || "";
@@ -2122,10 +2157,6 @@ function EngineeringPanel({ roundNo, season, race }) {
   }, [roundNo, season, tyreStrategySession]);
 
   useEffect(() => {
-    setTyreStrategySession("race");
-  }, [roundNo, season]);
-
-  useEffect(() => {
     if (!roundNo || !h2hDriverA || !h2hDriverB || h2hDriverA === h2hDriverB) {
       setH2hData(null);
       setSelectedH2HLap(null);
@@ -2144,11 +2175,34 @@ function EngineeringPanel({ roundNo, season, race }) {
     getEngineeringH2H(roundNo, season, h2hDriverA, h2hDriverB, h2hSession)
       .then((data) => {
         setH2hData(data);
-        setTrackLapSelectionA("fastest");
-        setTrackLapSelectionB("fastest");
         setSelectedSectorIndex(1);
-        const firstLap = data?.lap_times?.common_laps?.[0]?.lap;
-        setSelectedH2HLap(Number.isFinite(Number(firstLap)) ? Number(firstLap) : null);
+        const commonLaps = data?.lap_times?.common_laps || [];
+        const firstLap = commonLaps[0]?.lap;
+        setSelectedH2HLap((current) => {
+          const currentLap = Number(current);
+          if (Number.isFinite(currentLap) && commonLaps.some((item) => Number(item?.lap) === currentLap)) {
+            return currentLap;
+          }
+          return Number.isFinite(Number(firstLap)) ? Number(firstLap) : null;
+        });
+        const trackLapsA = data?.track_dominance?.driver_a?.laps || [];
+        const trackLapsB = data?.track_dominance?.driver_b?.laps || [];
+        setTrackLapSelectionA((current) => {
+          const normalized = String(current || "").trim().toLowerCase();
+          if (normalized === "fastest" || normalized === "slowest") return normalized;
+          const lapValue = Number.parseInt(normalized, 10);
+          return Number.isFinite(lapValue) && trackLapsA.some((item) => Number(item?.lap) === lapValue)
+            ? String(lapValue)
+            : "fastest";
+        });
+        setTrackLapSelectionB((current) => {
+          const normalized = String(current || "").trim().toLowerCase();
+          if (normalized === "fastest" || normalized === "slowest") return normalized;
+          const lapValue = Number.parseInt(normalized, 10);
+          return Number.isFinite(lapValue) && trackLapsB.some((item) => Number(item?.lap) === lapValue)
+            ? String(lapValue)
+            : "fastest";
+        });
       })
       .catch((error) => {
         setH2hData(null);
@@ -2157,15 +2211,15 @@ function EngineeringPanel({ roundNo, season, race }) {
       .finally(() => setH2hLoading(false));
   }, [roundNo, season, h2hDriverA, h2hDriverB, h2hSession]);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
     setH2hTab("lap_times");
   }, [roundNo, season]);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
     setH2hSession("race");
   }, [roundNo, season]);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
     setH2hDriverA("");
     setH2hDriverB("");
     setH2hData(null);
@@ -2176,11 +2230,11 @@ function EngineeringPanel({ roundNo, season, race }) {
     setSelectedSectorIndex(1);
   }, [roundNo, season]);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
     setPositionsViewTab("lap_by_lap");
   }, [roundNo, season]);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
     setPositionsSession("race");
   }, [roundNo, season]);
 
@@ -2310,12 +2364,16 @@ function EngineeringPanel({ roundNo, season, race }) {
     };
   }, [roundNo, season, telemetrySession, telemetrySelections]);
 
-  useEffect(() => {
+  useDidUpdateEffect(() => {
     setTelemetrySession("race");
     setTelemetrySelections({});
     setTelemetryTraces({});
     setTelemetryCardLoading({});
     telemetryFetchSignatureRef.current = {};
+  }, [roundNo, season]);
+
+  useDidUpdateEffect(() => {
+    setTyreStrategySession("race");
   }, [roundNo, season]);
 
 
@@ -3439,6 +3497,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cleanUrl = `${window.location.pathname}${window.location.hash || ""}`;
+    window.history.replaceState(null, "", cleanUrl);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     const nowMs = Date.now();
     getCasualOverview(season).then((data) => {
@@ -3492,7 +3556,7 @@ export default function App() {
               <button className={mode === "engineering" ? "active" : ""} onClick={() => setMode("engineering")}>Nerd Mode</button>
               <div className="form-row">
                 <span className="small">Season</span>
-                <select value={season} onChange={(e) => setSeason(Number(e.target.value) || 2025)}>
+                <select value={season} onChange={(e) => setSeason(sanitizeSeasonValue(e.target.value, 2026))}>
                   {seasons.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
