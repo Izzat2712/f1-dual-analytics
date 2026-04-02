@@ -1535,7 +1535,7 @@ function CasualPanel({ overview, race, roundsSummary, roundNo }) {
                   </div>
                 </div>
 
-                <div className="driver-form-finishes">
+                <div className={`driver-form-finishes ${row?.recentResults?.length === 5 ? "has-five-results" : ""}`}>
                   {row?.recentResults?.length ? row.recentResults.map((entry) => (
                     <span
                       key={`${row.driver}-${entry.round}`}

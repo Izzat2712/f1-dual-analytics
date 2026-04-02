@@ -640,6 +640,7 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 0.38rem;
+  justify-content: center;
 }
 
 .driver-form-finish-chip {
@@ -680,6 +681,25 @@ select {
 
 .driver-form-finish-chip.is-neutral {
   color: #d6e2fa;
+}
+
+.driver-form-finishes.has-five-results {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  justify-items: center;
+}
+
+.driver-form-finishes.has-five-results .driver-form-finish-chip {
+  grid-column: span 2;
+  width: 100%;
+}
+
+.driver-form-finishes.has-five-results .driver-form-finish-chip:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+
+.driver-form-finishes.has-five-results .driver-form-finish-chip:nth-child(5) {
+  grid-column: 4 / span 2;
 }
 
 .driver-form-stats {
