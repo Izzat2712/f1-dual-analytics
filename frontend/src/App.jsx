@@ -2111,13 +2111,11 @@ function EngineeringPanel({ roundNo, season, race }) {
       setH2hDriverB("");
       return;
     }
-    const firstDriver = h2hDriverOptions[0] || "";
-    const secondDriver = h2hDriverOptions.find((name) => name !== firstDriver) || "";
-    if (!h2hDriverA || !h2hDriverOptions.includes(h2hDriverA)) {
-      setH2hDriverA(firstDriver);
+    if (h2hDriverA && !h2hDriverOptions.includes(h2hDriverA)) {
+      setH2hDriverA("");
     }
-    if (!h2hDriverB || !h2hDriverOptions.includes(h2hDriverB) || h2hDriverB === h2hDriverA) {
-      setH2hDriverB(secondDriver);
+    if (h2hDriverB && !h2hDriverOptions.includes(h2hDriverB)) {
+      setH2hDriverB("");
     }
   }, [h2hDriverOptions, h2hDriverA, h2hDriverB]);
 
@@ -2569,6 +2567,11 @@ function EngineeringPanel({ roundNo, season, race }) {
 
   const h2hColorA = colorForTeam(h2hDriverInfoA?.team, "#e11d48", season);
   const h2hColorB = colorForTeam(h2hDriverInfoB?.team, "#2563eb", season);
+  const h2hSameTeamComparison = Boolean(
+    h2hDriverInfoA?.team
+    && h2hDriverInfoB?.team
+    && String(h2hDriverInfoA.team).trim().toLowerCase() === String(h2hDriverInfoB.team).trim().toLowerCase()
+  );
 
   const h2hLapChartData = useMemo(
     () => h2hCommonLaps.map((item) => ({
@@ -2851,10 +2854,13 @@ function EngineeringPanel({ roundNo, season, race }) {
 
             {showPositionsLapByLapUi ? (
               <div className="position-driver-legend">
-                <span style={{ color: "#5e6773" }}>QUALIFYING RESULTS:</span>
                 {visiblePositionDrivers.map((name) => (
-                  <span key={name} style={{ color: positionDriverColors[name] || "#111" }}>
-                    {dashedDriversSet.has(name) ? `${driverCode(name)} (dashed)` : driverCode(name)}
+                  <span key={name} className="h2h-line-legend-item" style={{ color: positionDriverColors[name] || "#dce7ff" }}>
+                    <i
+                      className={`h2h-line-legend-swatch${dashedDriversSet.has(name) ? " is-dashed" : ""}`}
+                      style={{ "--legend-color": positionDriverColors[name] || "#334155" }}
+                    />
+                    {driverCode(name)}
                   </span>
                 ))}
               </div>
@@ -3170,10 +3176,29 @@ function EngineeringPanel({ roundNo, season, race }) {
                       )}
                     />
                     <Line type="monotone" dataKey="driverA" stroke={h2hColorA} strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="driverB" stroke={h2hColorB} strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="driverB"
+                      stroke={h2hColorB}
+                      strokeWidth={2}
+                      strokeDasharray={h2hSameTeamComparison ? "6 4" : undefined}
+                      dot={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+              {h2hSameTeamComparison ? (
+                <div className="h2h-line-legend small" aria-label="H2H same-team line style hint">
+                  <span className="h2h-line-legend-item">
+                    <i className="h2h-line-legend-swatch" style={{ "--legend-color": h2hColorA }} />
+                    {h2hDriverInfoA?.name || "Driver A"}
+                  </span>
+                  <span className="h2h-line-legend-item">
+                    <i className="h2h-line-legend-swatch is-dashed" style={{ "--legend-color": h2hColorB }} />
+                    {h2hDriverInfoB?.name || "Driver B"}
+                  </span>
+                </div>
+              ) : null}
 
               <div className="h2h-pace-grid">
                 <div className="card">

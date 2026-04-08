@@ -1310,9 +1310,10 @@ thead th {
   margin-top: 0.45rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.52rem;
+  gap: 0.52rem 0.9rem;
   font-weight: 700;
   font-size: 0.95rem;
+  align-items: center;
 }
 
 .power-unit-team-legend {
@@ -1564,6 +1565,33 @@ thead th {
 .h2h-chart-wrap {
   width: 100%;
   min-height: 340px;
+}
+
+.h2h-line-legend {
+  margin-top: -0.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.h2h-line-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.h2h-line-legend-swatch {
+  --legend-color: #dce7ff;
+  width: 24px;
+  height: 0;
+  border-top: 3px solid var(--legend-color);
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.h2h-line-legend-swatch.is-dashed {
+  border-top-style: dashed;
 }
 
 .h2h-lap-picker {
