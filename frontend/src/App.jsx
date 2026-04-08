@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Bar,
   BarChart,
+  Cell,
 } from "recharts";
 import {
   getSeasons,
@@ -21,6 +22,7 @@ import {
   getEngineeringH2H,
   getEngineeringTelemetryCatalog,
   getEngineeringTelemetryTrace,
+  getEngineeringQualiSimulator,
 } from "./api";
 import { Analytics } from "@vercel/analytics/react";
 import "./styles.css";
@@ -339,6 +341,18 @@ function formatMetricSeconds(seconds) {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value < 0) return "-";
   return `${value.toFixed(3)}s`;
+}
+
+function formatPercent(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "-";
+  return `${(numeric * 100).toFixed(digits)}%`;
+}
+
+function formatExpectedPosition(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "-";
+  return numeric.toFixed(2);
 }
 
 function formatSignedDelta(seconds) {
@@ -2079,6 +2093,17 @@ function EngineeringPanel({ roundNo, season, race }) {
   const [telemetryTraces, setTelemetryTraces] = useState({});
   const [telemetryCardLoading, setTelemetryCardLoading] = useState({});
   const telemetryFetchSignatureRef = useRef({});
+  const [qualiSimConfig, setQualiSimConfig] = useState({
+    simulations: 5000,
+    chaos: 0,
+    formBias: 0,
+  });
+  const [qualiSimData, setQualiSimData] = useState(null);
+  const [qualiSimLoading, setQualiSimLoading] = useState(false);
+  const [qualiSimError, setQualiSimError] = useState("");
+  const [qualiSimHasRun, setQualiSimHasRun] = useState(false);
+  const [qualiSimInfoOpen, setQualiSimInfoOpen] = useState(false);
+  const [selectedQualiDriver, setSelectedQualiDriver] = useState("");
 
   const raceDrivers = useMemo(
     () => (race?.results || []).map((r) => r?.driver).filter(Boolean),
@@ -2362,6 +2387,28 @@ function EngineeringPanel({ roundNo, season, race }) {
     };
   }, [roundNo, season, telemetrySession, telemetrySelections]);
 
+  const loadQualiSim = (config = qualiSimConfig) => {
+    if (!roundNo) return;
+    setQualiSimLoading(true);
+    setQualiSimError("");
+    setQualiSimHasRun(true);
+    getEngineeringQualiSimulator(
+      roundNo,
+      season,
+      config.simulations,
+      (Number(config.chaos) || 0) / 100,
+      (Number(config.formBias) || 0) / 100
+    )
+      .then((data) => {
+        setQualiSimData(data);
+      })
+      .catch((error) => {
+        setQualiSimData(null);
+        setQualiSimError(error?.message || "Unable to load qualifying simulator.");
+      })
+      .finally(() => setQualiSimLoading(false));
+  };
+
   useDidUpdateEffect(() => {
     setTelemetrySession("race");
     setTelemetrySelections({});
@@ -2373,6 +2420,25 @@ function EngineeringPanel({ roundNo, season, race }) {
   useDidUpdateEffect(() => {
     setTyreStrategySession("race");
   }, [roundNo, season]);
+
+  useDidUpdateEffect(() => {
+    setQualiSimData(null);
+    setQualiSimError("");
+    setQualiSimHasRun(false);
+    setSelectedQualiDriver("");
+  }, [roundNo, season]);
+
+  useEffect(() => {
+    const rows = qualiSimData?.expected_grid || [];
+    if (!rows.length) {
+      setSelectedQualiDriver("");
+      return;
+    }
+    const currentStillExists = rows.some((row) => row?.driver === selectedQualiDriver);
+    if (!currentStillExists) {
+      setSelectedQualiDriver(rows[0]?.driver || "");
+    }
+  }, [qualiSimData, selectedQualiDriver]);
 
 
   const positionDriverTeamMap = useMemo(() => {
@@ -3435,14 +3501,513 @@ function EngineeringPanel({ roundNo, season, race }) {
     </div>
   );
 
-  const renderDiagnosticsTab = () => (
-    <div className="grid">
-      <div className="card wide-card">
-        <h3>Coming Soon</h3>
-        <div className="small">More features are coming soon. Stay tuned.</div>
+  const renderDiagnosticsTab = () => {
+    const expectedGrid = qualiSimData?.expected_grid || [];
+    const comparisonRows = qualiSimData?.comparison || [];
+    const heatmapRows = qualiSimData?.heatmap || [];
+    const fieldSize = Number(qualiSimData?.field_size) || 0;
+    const positions = Array.from({ length: fieldSize }, (_, idx) => idx + 1);
+    const driverTeamMap = {};
+    expectedGrid.forEach((row) => {
+      if (row?.driver && row?.team) {
+        driverTeamMap[row.driver] = row.team;
+      }
+    });
+    const poleFavorite = qualiSimData?.cards?.pole_favorite || null;
+    const frontRowFavorite = qualiSimData?.cards?.front_row_favorite || null;
+    const bubbleDriver = qualiSimData?.cards?.bubble_driver || null;
+    const selectedDetail = qualiSimData?.driver_details?.[selectedQualiDriver] || null;
+    const selectedHeatmapRow = heatmapRows.find((row) => row?.driver === selectedQualiDriver) || null;
+    const selectedDriverDistribution = (selectedHeatmapRow?.probabilities || [])
+      .map((probability, idx) => ({
+        position: `P${idx + 1}`,
+        probabilityPct: Math.round(Number(probability || 0) * 1000) / 10,
+      }))
+      .filter((item) => item.probabilityPct > 0);
+    const comparisonChartRows = comparisonRows
+      .map((row) => ({
+        ...row,
+        deltaValue: Number.isFinite(Number(row.delta_positions)) ? Number(row.delta_positions) : 0,
+        label: driverCode(row.driver),
+      }))
+      .filter((row) => row.deltaValue !== 0)
+      .sort((a, b) => Math.abs(b.deltaValue) - Math.abs(a.deltaValue));
+    const selectedDriverColor = selectedDetail
+      ? colorForDriver(selectedDetail.driver, driverTeamMap, expectedGrid.findIndex((row) => row?.driver === selectedDetail.driver), season)
+      : "#ff6058";
+
+    return (
+      <div className="grid">
+        <div className="card wide-card">
+          <div className="card-title-row">
+            <div className="quali-header-main">
+              <div className="quali-title-wrap">
+                <h3>Qualifying Simulator</h3>
+                <button
+                  type="button"
+                  className="quali-info-button"
+                  onClick={() => setQualiSimInfoOpen((current) => !current)}
+                  aria-expanded={qualiSimInfoOpen}
+                  aria-label="Explain simulator controls"
+                >
+                  i
+                </button>
+              </div>
+              <div className="quali-credit-wrap">
+                <span className="small">Inspired by Stuart Wilson&apos;s F1 Qualifying Monte Carlo Simulator</span>
+                <a
+                  className="quali-credit-link"
+                  href="https://github.com/stuart-n-wilson"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open Stuart Wilson GitHub profile"
+                >
+                  <GithubIcon />
+                  <span>GitHub</span>
+                </a>
+              </div>
+            </div>
+            <span className="telemetry-source-pill source-openf1">MONTE CARLO</span>
+          </div>
+          <p className="small">
+            Simulates Q1, Q2, and Q3 thousands of times using this round&apos;s qualifying pace, with optional randomness and season-form nudges.
+          </p>
+          {qualiSimInfoOpen ? (
+            <div className="quali-info-panel">
+              <p className="small"><strong>Chaos</strong> adds more lap-time volatility and makes compromised or standout laps more likely. Keep it at `0%` for the cleanest baseline simulation.</p>
+              <p className="small"><strong>Form Bias</strong> gives a small extra edge to drivers running higher in the season standings. Keep it at `0%` if you want the sim to rely only on the selected round&apos;s pace reference.</p>
+            </div>
+          ) : null}
+          <div className="quali-controls">
+            <label className="quali-control">
+              <span className="small">Simulations</span>
+              <select
+                value={String(qualiSimConfig.simulations)}
+                onChange={(e) => setQualiSimConfig((current) => ({
+                  ...current,
+                  simulations: Number(e.target.value) || 5000,
+                }))}
+              >
+                {[1000, 3000, 5000, 10000].map((value) => (
+                  <option key={`sim-${value}`} value={value}>{value.toLocaleString()}</option>
+                ))}
+              </select>
+            </label>
+            <label className="quali-control">
+              <span className="small">Chaos</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={qualiSimConfig.chaos}
+                onChange={(e) => setQualiSimConfig((current) => ({
+                  ...current,
+                  chaos: Number(e.target.value) || 0,
+                }))}
+              />
+              <span className="small">{Math.round(Number(qualiSimConfig.chaos) || 0)}%</span>
+            </label>
+            <label className="quali-control">
+              <span className="small">Form Bias</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={qualiSimConfig.formBias}
+                onChange={(e) => setQualiSimConfig((current) => ({
+                  ...current,
+                  formBias: Number(e.target.value) || 0,
+                }))}
+              />
+              <span className="small">{Math.round(Number(qualiSimConfig.formBias) || 0)}%</span>
+            </label>
+          </div>
+          <div className="quali-actions-row">
+            <button type="button" onClick={() => loadQualiSim(qualiSimConfig)} disabled={qualiSimLoading}>
+              {qualiSimLoading ? "Running..." : "Run Simulation"}
+            </button>
+            <span className="small">
+              Round {roundNo} | {qualiSimData?.simulations?.toLocaleString?.() || qualiSimConfig.simulations.toLocaleString()} runs
+            </span>
+          </div>
+          {qualiSimError ? <div className="small">{qualiSimError}</div> : null}
+          {!qualiSimError && qualiSimLoading && !qualiSimData ? (
+            <div className="quali-skeleton-grid" aria-hidden="true">
+              <div className="quali-skeleton-card" />
+              <div className="quali-skeleton-card" />
+              <div className="quali-skeleton-card" />
+            </div>
+          ) : null}
+          {!qualiSimHasRun && !qualiSimLoading && !qualiSimError ? (
+            <div className="small">Adjust the settings if you want, then click `Run Simulation` to generate the qualifying probabilities.</div>
+          ) : null}
+        </div>
+
+        {qualiSimData ? (
+          <>
+            <div className="card">
+              <h3>Pole Favorite</h3>
+              <div className="quali-hero-metric">
+                {poleFavorite?.driver || "-"}
+              </div>
+              <div className="small">
+                Pole chance: <strong>{formatPercent(poleFavorite?.pole_probability)}</strong>
+              </div>
+              <div className="small">
+                Expected grid slot: <strong>P{Math.max(1, Math.round(Number(poleFavorite?.expected_position) || 1))}</strong>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>Front Row Favorite</h3>
+              <div className="quali-hero-metric">
+                {frontRowFavorite?.driver || "-"}
+              </div>
+              <div className="small">
+                Front row chance: <strong>{formatPercent(frontRowFavorite?.front_row_probability)}</strong>
+              </div>
+              <div className="small">
+                Q3 chance: <strong>{formatPercent(frontRowFavorite?.q3_probability)}</strong>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>Bubble Watch</h3>
+              <div className="quali-hero-metric">
+                {bubbleDriver?.driver || "-"}
+              </div>
+              <div className="small">
+                Q3 chance: <strong>{formatPercent(bubbleDriver?.q3_probability)}</strong>
+              </div>
+              <div className="small">
+                Q2 elimination risk: <strong>{formatPercent(bubbleDriver?.q2_elimination_probability)}</strong>
+              </div>
+            </div>
+
+            <div className="card wide-card">
+              <h3>Expected Grid</h3>
+              <div className="table-scroll card-table-wrap">
+                <table className="quali-expected-table">
+                  <thead>
+                    <tr>
+                      <th>Rank</th>
+                      <th>Avg Pos</th>
+                      <th>Driver</th>
+                      <th>Actual</th>
+                      <th>Pole</th>
+                      <th>Front Row</th>
+                      <th>Q3</th>
+                      <th>Q2 KO</th>
+                      <th>Q1 KO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expectedGrid.map((row, idx) => {
+                      const color = colorForDriver(row.driver, driverTeamMap, idx, season);
+                      const isSelected = selectedQualiDriver === row.driver;
+                      return (
+                        <tr
+                          key={`quali-grid-${row.driver}`}
+                          className={isSelected ? "quali-row-selected" : ""}
+                          onClick={() => setSelectedQualiDriver(row.driver)}
+                        >
+                          <td><strong>P{idx + 1}</strong></td>
+                          <td>{formatExpectedPosition(row.expected_position)}</td>
+                          <td>
+                            <span className="quali-driver-chip" style={{ "--driver-accent": color }}>
+                              <span className="quali-driver-dot" />
+                              {row.driver}
+                            </span>
+                          </td>
+                          <td>{Number.isFinite(Number(row.actual_position)) ? `P${row.actual_position}` : "-"}</td>
+                          <td>{formatPercent(row.pole_probability)}</td>
+                          <td>{formatPercent(row.front_row_probability)}</td>
+                          <td>{formatPercent(row.q3_probability)}</td>
+                          <td>{formatPercent(row.q2_elimination_probability)}</td>
+                          <td>{formatPercent(row.q1_elimination_probability)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {selectedDetail ? (
+              <div className="card wide-card">
+                <div className="card-title-row">
+                  <h3>Driver Detail</h3>
+                  <span className="small">{selectedDetail.driver} | {selectedDetail.profile_label || "Driver profile"}</span>
+                </div>
+                <div className="quali-driver-hero">
+                  <div className="quali-driver-hero-main">
+                    <DriverAvatar driverName={selectedDetail.driver} season={season} roundNo={roundNo} />
+                    <div>
+                      <div className="quali-hero-metric">{selectedDetail.driver}</div>
+                      <p className="small">{selectedDetail.profile_label || "Driver profile"}</p>
+                    </div>
+                  </div>
+                  <div className="quali-driver-hero-side">
+                    <span className="small">Expected Rank</span>
+                    <strong>P{selectedDetail.expected_rank || "-"}</strong>
+                  </div>
+                </div>
+                <div className="quali-detail-grid">
+                  <div className="quali-meta-item">
+                    <span className="small">Expected Rank</span>
+                    <strong>P{selectedDetail.expected_rank || "-"}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Actual Quali</span>
+                    <strong>{selectedDetail.actual_position ? `P${selectedDetail.actual_position}` : "-"}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Recent Avg Quali</span>
+                    <strong>{formatExpectedPosition(selectedDetail.recent_context?.avg_position)}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Total Model Shift</span>
+                    <strong>{formatSignedDelta(selectedDetail.adjustments?.total_s)}</strong>
+                  </div>
+                </div>
+                <div className="quali-detail-grid">
+                  <div className="quali-meta-item">
+                    <span className="small">Baseline Q1</span>
+                    <strong>{selectedDetail.baseline?.q1 || "-"}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Baseline Q2</span>
+                    <strong>{selectedDetail.baseline?.q2 || "-"}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Baseline Q3</span>
+                    <strong>{selectedDetail.baseline?.q3 || "-"}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Teammate Gap</span>
+                    <strong>{formatSignedDelta(selectedDetail.recent_context?.teammate_gap_s)}</strong>
+                  </div>
+                </div>
+                <div className="quali-detail-grid">
+                  <div className="quali-meta-item">
+                    <span className="small">Recent Form Adj.</span>
+                    <strong>{formatSignedDelta(selectedDetail.adjustments?.recent_form_s)}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Teammate Adj.</span>
+                    <strong>{formatSignedDelta(selectedDetail.adjustments?.teammate_s)}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Season Form Adj.</span>
+                    <strong>{formatSignedDelta(selectedDetail.adjustments?.season_form_s)}</strong>
+                  </div>
+                  <div className="quali-meta-item">
+                    <span className="small">Best Outcomes</span>
+                    <strong>{(selectedDetail.top_outcomes || []).map((item) => `P${item.position}`).join(", ") || "-"}</strong>
+                  </div>
+                </div>
+                <div className="quali-distribution-card">
+                  <div className="card-title-row">
+                    <h3>Selected Driver Distribution</h3>
+                    <span className="small">How often this driver landed in each grid slot.</span>
+                  </div>
+                  <div style={{ width: "100%", height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={selectedDriverDistribution}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="position" />
+                        <YAxis tickFormatter={(value) => `${value}%`} />
+                        <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                        <Bar dataKey="probabilityPct" fill={selectedDriverColor} radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div className="quali-detail-outcomes">
+                  {(selectedDetail.top_outcomes || []).map((item) => (
+                    <div key={`detail-outcome-${selectedDetail.driver}-${item.position}`} className="quali-outcome-pill">
+                      <span>P{item.position}</span>
+                      <strong>{formatPercent(item.probability)}</strong>
+                    </div>
+                  ))}
+                </div>
+                {(selectedDetail.explanations || []).map((text, idx) => (
+                  <p key={`driver-detail-note-${idx}`} className="small">{text}</p>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="card wide-card">
+              <div className="card-title-row">
+                <h3>Expected vs Actual</h3>
+                <span className="small">Positive bars mean the model rated the driver better than the real result.</span>
+              </div>
+              <div className="quali-comparison-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={comparisonChartRows} layout="vertical" margin={{ left: 8, right: 18, top: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" domain={["dataMin - 1", "dataMax + 1"]} />
+                    <YAxis type="category" dataKey="label" width={44} />
+                    <Tooltip
+                      formatter={(value) => {
+                        const numeric = Number(value);
+                        if (!Number.isFinite(numeric)) return "-";
+                        return numeric === 0
+                          ? "Matched result"
+                          : numeric > 0
+                            ? `${numeric} places better than reality`
+                            : `${Math.abs(numeric)} places worse than reality`;
+                      }}
+                    />
+                    <Bar dataKey="deltaValue" radius={[0, 6, 6, 0]}>
+                      {comparisonChartRows.map((row) => (
+                        <Cell
+                          key={`comparison-cell-${row.driver}`}
+                          fill={row.deltaValue > 0 ? "#52d6a8" : row.deltaValue < 0 ? "#ff8f8f" : "#94a3b8"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="quali-comparison-list">
+                {comparisonRows.map((row, idx) => {
+                  const color = colorForDriver(row.driver, driverTeamMap, idx, season);
+                  const delta = Number(row.delta_positions);
+                  const deltaText = Number.isFinite(delta)
+                    ? (delta > 0 ? `Model ${delta} places better than reality` : (delta < 0 ? `Model ${Math.abs(delta)} places worse than reality` : "Model matched the result"))
+                    : "No direct comparison";
+                  return (
+                    <button
+                      key={`comparison-${row.driver}`}
+                      type="button"
+                      className={`quali-comparison-row ${selectedQualiDriver === row.driver ? "is-selected" : ""}`}
+                      onClick={() => setSelectedQualiDriver(row.driver)}
+                    >
+                      <span className="quali-driver-chip" style={{ "--driver-accent": color }}>
+                        <span className="quali-driver-dot" />
+                        {row.driver}
+                      </span>
+                      <span className="small">Expected P{row.expected_rank || "-"}</span>
+                      <span className="small">Actual P{row.actual_position || "-"}</span>
+                      <span className={`small ${delta > 0 ? "quali-delta-good" : delta < 0 ? "quali-delta-bad" : ""}`}>{deltaText}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="card wide-card">
+              <div className="card-title-row">
+                <h3>Position Probabilities</h3>
+                <span className="small">Exact finishing-slot odds for each simulated grid position.</span>
+              </div>
+              <div className="table-scroll">
+                <table className="quali-heatmap-table">
+                  <colgroup>
+                    <col className="quali-col-driver" />
+                    <col className="quali-col-actual" />
+                    {positions.map((position) => (
+                      <col key={`quali-col-${position}`} className="quali-col-probability" />
+                    ))}
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Driver</th>
+                      <th>Act</th>
+                      {positions.map((position) => (
+                        <th key={`pos-header-${position}`}>P{position}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {heatmapRows.map((row, idx) => {
+                      const color = colorForDriver(row.driver, driverTeamMap, idx, season);
+                      const probs = Array.isArray(row.probabilities) ? row.probabilities : [];
+                      const isSelected = selectedQualiDriver === row.driver;
+                      return (
+                        <tr
+                          key={`heatmap-${row.driver}`}
+                          className={isSelected ? "quali-row-selected" : ""}
+                          onClick={() => setSelectedQualiDriver(row.driver)}
+                        >
+                          <td>
+                            <span className="quali-driver-chip" style={{ "--driver-accent": color }}>
+                              <span className="quali-driver-dot" />
+                              {driverCode(row.driver)}
+                            </span>
+                          </td>
+                          <td>{Number.isFinite(Number(row.actual_position)) ? row.actual_position : "-"}</td>
+                          {probs.map((probability, probIdx) => {
+                            const alpha = Math.max(0.08, Math.min(0.96, Number(probability) * 1.75));
+                            return (
+                              <td
+                                key={`heatmap-${row.driver}-${probIdx + 1}`}
+                                className="quali-heatmap-cell"
+                                style={{ backgroundColor: `rgba(255, 96, 88, ${alpha})` }}
+                              >
+                                {Number(probability) >= 0.005 ? `${Math.round(Number(probability) * 100)}%` : ""}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="card wide-card">
+              <h3>Model Notes</h3>
+              <p className="small">{qualiSimData?.assumptions?.model || "-"}</p>
+              {(qualiSimData?.assumptions?.notes || []).map((note, idx) => (
+                <p key={`quali-note-${idx}`} className="small">{note}</p>
+              ))}
+              <div className="quali-meta-grid">
+                <div className="quali-meta-item">
+                  <span className="small">Raw Round Pace</span>
+                  <strong>{formatPercent(qualiSimData?.transparency?.weights?.raw_round_pace)}</strong>
+                </div>
+                <div className="quali-meta-item">
+                  <span className="small">Recent/Teammate Context</span>
+                  <strong>{formatPercent(qualiSimData?.transparency?.weights?.recent_quali_trend_and_teammate_context)}</strong>
+                </div>
+                <div className="quali-meta-item">
+                  <span className="small">Q1 Attempts</span>
+                  <strong>{qualiSimData?.transparency?.attempts_by_session?.q1 ?? "-"}</strong>
+                </div>
+                <div className="quali-meta-item">
+                  <span className="small">Incident Risk</span>
+                  <strong>{formatPercent(qualiSimData?.transparency?.chaos?.incident_risk)}</strong>
+                </div>
+              </div>
+              <div className="quali-meta-grid">
+                <div className="quali-meta-item">
+                  <span className="small">Median Q2-Q1 Delta</span>
+                  <strong>{formatSignedDelta(qualiSimData?.assumptions?.session_deltas?.q2_minus_q1_s)}</strong>
+                </div>
+                <div className="quali-meta-item">
+                  <span className="small">Median Q3-Q2 Delta</span>
+                  <strong>{formatSignedDelta(qualiSimData?.assumptions?.session_deltas?.q3_minus_q2_s)}</strong>
+                </div>
+                <div className="quali-meta-item">
+                  <span className="small">Avg Q1 Best Lap</span>
+                  <strong>{formatLapTimeSeconds(qualiSimData?.session_average_best_lap_s?.q1)}</strong>
+                </div>
+                <div className="quali-meta-item">
+                  <span className="small">Avg Q3 Best Lap</span>
+                  <strong>{formatLapTimeSeconds(qualiSimData?.session_average_best_lap_s?.q3)}</strong>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="engineering-panel-wrap">
@@ -3451,7 +4016,7 @@ function EngineeringPanel({ roundNo, season, race }) {
         <button className={engineeringTab === "tyre_strategy" ? "active" : ""} onClick={() => setEngineeringTab("tyre_strategy")}>Tyre Strategy</button>
         <button className={engineeringTab === "h2h" ? "active" : ""} onClick={() => setEngineeringTab("h2h")}>H2H</button>
         <button className={engineeringTab === "telemetry" ? "active" : ""} onClick={() => setEngineeringTab("telemetry")}>Telemetry</button>
-        <button className={engineeringTab === "diagnostics" ? "active" : ""} onClick={() => setEngineeringTab("diagnostics")}>COMING SOON</button>
+        <button className={engineeringTab === "diagnostics" ? "active" : ""} onClick={() => setEngineeringTab("diagnostics")}>Quali Sim</button>
       </div>
       {engineeringTab === "positions" ? renderPositionsTab() : null}
       {engineeringTab === "tyre_strategy" ? renderTyreStrategyTab() : null}

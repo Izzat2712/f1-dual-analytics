@@ -172,6 +172,7 @@ TELEMETRY_CATALOG_CACHE: dict[tuple[int, int, str], dict] = {}
 OPENF1_SESSIONS_CACHE: dict[tuple[int, str], list[dict]] = {}
 ROUND_SESSION_SCHEDULE_CACHE: dict[tuple[int, int], list[dict]] = {}
 SEASON_SESSION_SCHEDULE_CACHE: dict[int, list[dict]] = {}
+QUALI_SIM_CACHE: dict[tuple[int, int, int, int, int], dict] = {}
 POSITIONS_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "positions_cache"
 POSITIONS_CACHE_VERSION = 15
 
@@ -2802,6 +2803,598 @@ def get_driver_result(season: int, round_no: int, driver: str) -> dict:
     raise HTTPException(status_code=404, detail=f"Driver '{driver}' not found in round {round_no}")
 
 
+def _qualifying_cutoffs(season: int, field_size: int) -> tuple[int, int]:
+    q2_count = 16 if season >= 2026 else 15
+    q2_count = min(max(0, q2_count), max(0, field_size))
+    q3_count = min(10, q2_count)
+    return q2_count, q3_count
+
+
+def _estimate_form_adjustments(season: int, driver_names: list[str], form_bias: float) -> dict[str, float]:
+    standings = get_season_data(season).get("driver_standings", [])
+    rank_map: dict[str, int] = {}
+    for idx, row in enumerate(standings, start=1):
+        driver_name = str(row.get("driver") or "").strip()
+        if driver_name:
+            rank_map[driver_name] = idx
+
+    total_ranked = max(len(rank_map), len(driver_names), 1)
+    max_effect = 0.22 * max(0.0, min(1.0, float(form_bias)))
+    adjustments: dict[str, float] = {}
+    midpoint = (total_ranked - 1) / 2 if total_ranked > 1 else 0.0
+    scale = max(midpoint, 1.0)
+
+    for driver_name in driver_names:
+        rank = rank_map.get(driver_name, total_ranked)
+        centered = (midpoint - (rank - 1)) / scale
+        adjustments[driver_name] = round(-max_effect * centered, 4)
+
+    return adjustments
+
+
+def _extract_best_comparable_quali_time(row: dict | None) -> float | None:
+    if not isinstance(row, dict):
+        return None
+    for key in ("q3", "q2", "q1"):
+        parsed = parse_lap_time_to_seconds(row.get(key))
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _build_recent_qualifying_context(season: int, round_no: int, driver_names: list[str]) -> dict[str, dict]:
+    season_data = get_season_data(season)
+    rounds = [item for item in season_data.get("rounds", []) if int(item.get("round", 0) or 0) < round_no]
+    recent_rounds = rounds[-5:]
+    field_size = max(len(driver_names), 1)
+    driver_set = set(driver_names)
+    context: dict[str, dict] = {
+        driver_name: {
+            "recent_avg_position": None,
+            "recent_position_component_s": 0.0,
+            "teammate_gap_s": None,
+            "teammate_component_s": 0.0,
+            "recent_rounds_used": 0,
+        }
+        for driver_name in driver_names
+    }
+    if not recent_rounds:
+        return context
+
+    positions_by_driver: dict[str, list[int]] = {driver_name: [] for driver_name in driver_names}
+    teammate_gaps_by_driver: dict[str, list[float]] = {driver_name: [] for driver_name in driver_names}
+
+    for prev_round in recent_rounds:
+        results_rows = prev_round.get("results") or []
+        team_by_driver = {
+            str(row.get("driver")): str(row.get("team"))
+            for row in results_rows
+            if row.get("driver") and row.get("team")
+        }
+        quali_rows = prev_round.get("qualifying") or []
+        quali_by_driver = {
+            str(row.get("driver")): row
+            for row in quali_rows
+            if row.get("driver")
+        }
+
+        teams_to_drivers: dict[str, list[str]] = {}
+        for driver_name, team_name in team_by_driver.items():
+            if driver_name not in driver_set or not team_name:
+                continue
+            teams_to_drivers.setdefault(team_name, []).append(driver_name)
+
+        for driver_name in driver_names:
+            qualifying_row = quali_by_driver.get(driver_name)
+            if qualifying_row:
+                position_value = int(qualifying_row.get("position", 0) or 0)
+                if position_value > 0:
+                    positions_by_driver[driver_name].append(position_value)
+
+        for team_drivers in teams_to_drivers.values():
+            if len(team_drivers) != 2:
+                continue
+            first, second = team_drivers
+            row_first = quali_by_driver.get(first)
+            row_second = quali_by_driver.get(second)
+            time_first = _extract_best_comparable_quali_time(row_first)
+            time_second = _extract_best_comparable_quali_time(row_second)
+            if time_first is None or time_second is None:
+                continue
+            teammate_gaps_by_driver[first].append(time_second - time_first)
+            teammate_gaps_by_driver[second].append(time_first - time_second)
+
+    for driver_name in driver_names:
+        recent_positions = positions_by_driver.get(driver_name) or []
+        if recent_positions:
+            avg_pos = float(np.mean(np.array(recent_positions, dtype=float)))
+            centered = ((field_size + 1) / 2) - avg_pos
+            position_component = -max(-0.12, min(0.12, centered * 0.012))
+            context[driver_name]["recent_avg_position"] = round(avg_pos, 2)
+            context[driver_name]["recent_position_component_s"] = round(position_component, 4)
+            context[driver_name]["recent_rounds_used"] = len(recent_positions)
+
+        teammate_gaps = teammate_gaps_by_driver.get(driver_name) or []
+        if teammate_gaps:
+            teammate_gap = float(np.mean(np.array(teammate_gaps, dtype=float)))
+            teammate_component = -max(-0.09, min(0.09, teammate_gap * 0.45))
+            context[driver_name]["teammate_gap_s"] = round(teammate_gap, 4)
+            context[driver_name]["teammate_component_s"] = round(teammate_component, 4)
+
+    return context
+
+
+def _driver_profile_label(row: dict) -> str:
+    pole_probability = float(row.get("pole_probability") or 0.0)
+    q3_probability = float(row.get("q3_probability") or 0.0)
+    q1_risk = float(row.get("q1_elimination_probability") or 0.0)
+    total_adjustment = float(row.get("model_adjustment_s") or 0.0)
+    top_outcomes = row.get("top_outcomes") or []
+    if pole_probability >= 0.25:
+        return "Strong pole threat"
+    if q3_probability >= 0.8 and total_adjustment < -0.02:
+        return "Quiet front-row danger"
+    if q3_probability >= 0.45 and q3_probability <= 0.65:
+        return "Q3 bubble"
+    if q1_risk >= 0.3:
+        return "Fragile floor"
+    if top_outcomes and any(int(item.get("position", 99)) > 6 for item in top_outcomes[:2]):
+        return "Volatile upside"
+    return "Steady baseline"
+
+
+def _safe_quantile(values: list[float], quantile: float, fallback: float = 0.0) -> float:
+    clean = [float(v) for v in values if np.isfinite(v)]
+    if not clean:
+        return fallback
+    return float(np.quantile(np.array(clean, dtype=float), quantile))
+
+
+def _estimate_qualifying_reference_times(qualifying_rows: list[dict], results_rows: list[dict]) -> dict[str, dict]:
+    known_q1: list[float] = []
+    known_q2: list[float] = []
+    known_q3: list[float] = []
+    q2_deltas: list[float] = []
+    q3_deltas: list[float] = []
+
+    for row in qualifying_rows:
+        q1 = parse_lap_time_to_seconds(row.get("q1"))
+        q2 = parse_lap_time_to_seconds(row.get("q2"))
+        q3 = parse_lap_time_to_seconds(row.get("q3"))
+        if q1 is not None:
+            known_q1.append(q1)
+        if q2 is not None:
+            known_q2.append(q2)
+        if q3 is not None:
+            known_q3.append(q3)
+        if q1 is not None and q2 is not None:
+            q2_deltas.append(q2 - q1)
+        if q2 is not None and q3 is not None:
+            q3_deltas.append(q3 - q2)
+
+    median_q2_delta = _safe_quantile(q2_deltas, 0.5, fallback=-0.28)
+    median_q3_delta = _safe_quantile(q3_deltas, 0.5, fallback=-0.17)
+    q1_floor = _safe_quantile(known_q1, 0.9, fallback=80.0)
+    q1_fast = _safe_quantile(known_q1, 0.1, fallback=q1_floor - 1.0)
+    grid_by_driver = {
+        str(row.get("driver")): int(row.get("grid", 0) or 0)
+        for row in results_rows
+        if row.get("driver")
+    }
+    finish_by_driver = {
+        str(row.get("driver")): int(row.get("position", 0) or 0)
+        for row in results_rows
+        if row.get("driver")
+    }
+
+    field_size = max(len(qualifying_rows), len(results_rows), 20)
+    references: dict[str, dict] = {}
+
+    for row in qualifying_rows:
+        driver_name = str(row.get("driver") or "").strip()
+        if not driver_name:
+            continue
+        q1 = parse_lap_time_to_seconds(row.get("q1"))
+        q2 = parse_lap_time_to_seconds(row.get("q2"))
+        q3 = parse_lap_time_to_seconds(row.get("q3"))
+
+        actual_position = int(row.get("position", 0) or 0)
+        reference_slot = actual_position or grid_by_driver.get(driver_name) or finish_by_driver.get(driver_name) or field_size
+        fallback_q1 = q1_floor + (max(reference_slot - 1, 0) * 0.11)
+
+        est_q1 = q1
+        if est_q1 is None and q2 is not None:
+            est_q1 = q2 - median_q2_delta
+        if est_q1 is None and q3 is not None:
+            est_q1 = q3 - median_q3_delta - median_q2_delta
+        if est_q1 is None:
+            est_q1 = fallback_q1
+
+        est_q2 = q2
+        if est_q2 is None:
+            est_q2 = est_q1 + median_q2_delta
+
+        est_q3 = q3
+        if est_q3 is None:
+            est_q3 = est_q2 + median_q3_delta
+
+        volatility_seed = [value for value in (q1, q2, q3) if value is not None]
+        driver_std = float(np.std(np.array(volatility_seed, dtype=float))) if len(volatility_seed) >= 2 else 0.0
+        pace_span = max(est_q1 - q1_fast, 0.0)
+        sigma_base = 0.08 + min(0.22, pace_span * 0.055)
+        sigma = min(0.42, max(0.075, sigma_base + (driver_std * 0.35)))
+
+        references[driver_name] = {
+            "driver": driver_name,
+            "actual_position": actual_position if actual_position > 0 else None,
+            "q1_s": round(float(est_q1), 3),
+            "q2_s": round(float(est_q2), 3),
+            "q3_s": round(float(est_q3), 3),
+            "q1_actual": row.get("q1"),
+            "q2_actual": row.get("q2"),
+            "q3_actual": row.get("q3"),
+            "sigma_s": round(float(sigma), 4),
+        }
+
+    return {
+        "drivers": references,
+        "median_q2_delta": round(float(median_q2_delta), 4),
+        "median_q3_delta": round(float(median_q3_delta), 4),
+    }
+
+
+def build_qualifying_simulator(season: int, round_no: int, simulations: int, chaos: float, form_bias: float) -> dict:
+    rounded_simulations = max(400, min(int(simulations), 20000))
+    rounded_chaos = max(0.0, min(float(chaos), 1.0))
+    rounded_form_bias = max(0.0, min(float(form_bias), 1.0))
+    cache_key = (
+        season,
+        round_no,
+        rounded_simulations,
+        int(round(rounded_chaos * 1000)),
+        int(round(rounded_form_bias * 1000)),
+    )
+    cached = QUALI_SIM_CACHE.get(cache_key)
+    if cached:
+        return cached
+
+    round_payload = get_round_payload(season, round_no)
+    qualifying_rows = sorted(round_payload.get("qualifying") or [], key=lambda row: int(row.get("position", 999) or 999))
+    results_rows = sorted(round_payload.get("results") or [], key=lambda row: int(row.get("position", 999) or 999))
+
+    if not qualifying_rows:
+        raise HTTPException(
+            status_code=404,
+            detail="Qualifying data is not available for this round yet.",
+        )
+
+    team_by_driver = {
+        str(row.get("driver")): str(row.get("team"))
+        for row in results_rows
+        if row.get("driver") and row.get("team")
+    }
+    references_payload = _estimate_qualifying_reference_times(qualifying_rows, results_rows)
+    references = references_payload["drivers"]
+    if not references:
+        raise HTTPException(status_code=404, detail="Unable to build qualifying references for this round.")
+
+    driver_names = [str(row.get("driver")) for row in qualifying_rows if str(row.get("driver") or "").strip()]
+    field_size = len(driver_names)
+    q2_count, q3_count = _qualifying_cutoffs(season, field_size)
+    history_context = _build_recent_qualifying_context(season, round_no, driver_names)
+    form_adjustments = _estimate_form_adjustments(season, driver_names, rounded_form_bias)
+    rng = np.random.default_rng(
+        seed=(
+            season * 100_000
+            + round_no * 1_000
+            + rounded_simulations
+            + int(round(rounded_chaos * 100))
+            + int(round(rounded_form_bias * 100))
+        )
+    )
+
+    attempts_by_session = {"q1": 3, "q2": 3, "q3": 2}
+    chaos_multiplier = 1.0 + (rounded_chaos * 1.45)
+    incident_risk = 0.014 + (rounded_chaos * 0.052)
+    miracle_risk = 0.01 + (rounded_chaos * 0.012)
+    session_time_totals = {"q1": 0.0, "q2": 0.0, "q3": 0.0}
+    position_counts = {driver_name: [0] * field_size for driver_name in driver_names}
+    pole_counts = {driver_name: 0 for driver_name in driver_names}
+    front_row_counts = {driver_name: 0 for driver_name in driver_names}
+    q3_counts = {driver_name: 0 for driver_name in driver_names}
+    q2_elimination_counts = {driver_name: 0 for driver_name in driver_names}
+    q1_elimination_counts = {driver_name: 0 for driver_name in driver_names}
+
+    def simulate_session(active_drivers: list[str], session_key: str) -> list[tuple[str, float]]:
+        ranked: list[tuple[str, float]] = []
+        base_attempts = attempts_by_session[session_key]
+        for driver_name in active_drivers:
+            reference = references[driver_name]
+            history_adjustment = float(history_context.get(driver_name, {}).get("recent_position_component_s", 0.0) or 0.0)
+            history_adjustment += float(history_context.get(driver_name, {}).get("teammate_component_s", 0.0) or 0.0)
+            raw_baseline = float(reference[f"{session_key}_s"])
+            weighted_baseline = raw_baseline + history_adjustment + float(form_adjustments.get(driver_name, 0.0))
+            mean_time = (raw_baseline * 0.68) + (weighted_baseline * 0.32)
+            sigma = max(0.06, float(reference["sigma_s"]) * chaos_multiplier)
+            best_lap = None
+            for _ in range(base_attempts):
+                lap = float(rng.normal(loc=mean_time, scale=sigma))
+                if rng.random() < incident_risk:
+                    lap += float(rng.uniform(0.18, 0.85)) * (0.8 + rounded_chaos)
+                elif rng.random() < miracle_risk:
+                    lap -= float(rng.uniform(0.02, 0.11))
+                best_lap = lap if best_lap is None else min(best_lap, lap)
+            ranked.append((driver_name, best_lap if best_lap is not None else mean_time))
+        ranked.sort(key=lambda item: (item[1], item[0]))
+        return ranked
+
+    for _ in range(rounded_simulations):
+        q1_ranked = simulate_session(driver_names, "q1")
+        for _, lap_time in q1_ranked:
+            session_time_totals["q1"] += float(lap_time)
+        q2_drivers = [driver_name for driver_name, _ in q1_ranked[:q2_count]]
+        for driver_name, _ in q1_ranked[q2_count:]:
+            q1_elimination_counts[driver_name] += 1
+
+        q2_ranked = simulate_session(q2_drivers, "q2")
+        for _, lap_time in q2_ranked:
+            session_time_totals["q2"] += float(lap_time)
+        q3_drivers = [driver_name for driver_name, _ in q2_ranked[:q3_count]]
+        for driver_name in q3_drivers:
+            q3_counts[driver_name] += 1
+        for driver_name, _ in q2_ranked[q3_count:]:
+            q2_elimination_counts[driver_name] += 1
+
+        q3_ranked = simulate_session(q3_drivers, "q3")
+        for _, lap_time in q3_ranked:
+            session_time_totals["q3"] += float(lap_time)
+
+        final_order = [driver_name for driver_name, _ in q3_ranked]
+        final_order.extend([driver_name for driver_name, _ in q2_ranked[q3_count:]])
+        final_order.extend([driver_name for driver_name, _ in q1_ranked[q2_count:]])
+
+        for position_idx, driver_name in enumerate(final_order, start=1):
+            position_counts[driver_name][position_idx - 1] += 1
+            if position_idx == 1:
+                pole_counts[driver_name] += 1
+            if position_idx <= 2:
+                front_row_counts[driver_name] += 1
+
+    expected_grid_rows: list[dict] = []
+    heatmap_rows: list[dict] = []
+
+    for driver_name in driver_names:
+        counts = position_counts[driver_name]
+        probabilities = [round(count / rounded_simulations, 4) for count in counts]
+        expected_position = sum((idx + 1) * prob for idx, prob in enumerate(probabilities))
+        pole_probability = pole_counts[driver_name] / rounded_simulations
+        front_row_probability = front_row_counts[driver_name] / rounded_simulations
+        q3_probability = q3_counts[driver_name] / rounded_simulations
+        q1_risk = q1_elimination_counts[driver_name] / rounded_simulations
+        q2_risk = q2_elimination_counts[driver_name] / rounded_simulations
+        reference = references[driver_name]
+        history = history_context.get(driver_name, {})
+        model_adjustment = float(history.get("recent_position_component_s", 0.0) or 0.0)
+        model_adjustment += float(history.get("teammate_component_s", 0.0) or 0.0)
+        model_adjustment += float(form_adjustments.get(driver_name, 0.0) or 0.0)
+        sorted_probabilities = sorted(
+            (
+                {"position": idx + 1, "probability": round(prob, 4)}
+                for idx, prob in enumerate(probabilities)
+                if prob > 0
+            ),
+            key=lambda item: (-float(item["probability"]), int(item["position"])),
+        )
+        expected_grid_rows.append(
+            {
+                "driver": driver_name,
+                "team": team_by_driver.get(driver_name),
+                "actual_position": reference.get("actual_position"),
+                "expected_position": round(expected_position, 2),
+                "pole_probability": round(pole_probability, 4),
+                "front_row_probability": round(front_row_probability, 4),
+                "q3_probability": round(q3_probability, 4),
+                "q2_elimination_probability": round(q2_risk, 4),
+                "q1_elimination_probability": round(q1_risk, 4),
+                "baseline_q1": format_lap_time(reference.get("q1_s")),
+                "baseline_q2": format_lap_time(reference.get("q2_s")),
+                "baseline_q3": format_lap_time(reference.get("q3_s")),
+                "baseline_q1_s": reference.get("q1_s"),
+                "baseline_q2_s": reference.get("q2_s"),
+                "baseline_q3_s": reference.get("q3_s"),
+                "form_adjustment_s": round(float(form_adjustments.get(driver_name, 0.0)), 4),
+                "recent_avg_position": history.get("recent_avg_position"),
+                "recent_rounds_used": history.get("recent_rounds_used"),
+                "recent_position_component_s": round(float(history.get("recent_position_component_s", 0.0) or 0.0), 4),
+                "teammate_gap_s": history.get("teammate_gap_s"),
+                "teammate_component_s": round(float(history.get("teammate_component_s", 0.0) or 0.0), 4),
+                "model_adjustment_s": round(float(model_adjustment), 4),
+                "top_outcomes": sorted_probabilities[:4],
+            }
+        )
+        heatmap_rows.append(
+            {
+                "driver": driver_name,
+                "team": team_by_driver.get(driver_name),
+                "actual_position": reference.get("actual_position"),
+                "probabilities": probabilities,
+            }
+        )
+
+    expected_grid_rows.sort(
+        key=lambda row: (
+            float(row.get("expected_position") or 999),
+            -(float(row.get("pole_probability") or 0.0)),
+            row.get("driver") or "",
+        )
+    )
+    expected_rank_by_driver = {
+        str(row.get("driver")): idx + 1
+        for idx, row in enumerate(expected_grid_rows)
+    }
+    comparison_rows = []
+    for row in expected_grid_rows:
+        row["profile_label"] = _driver_profile_label(row)
+        actual_position = row.get("actual_position")
+        expected_rank = expected_rank_by_driver.get(str(row.get("driver")), None)
+        delta = None
+        if isinstance(actual_position, int) and expected_rank is not None:
+            delta = actual_position - expected_rank
+        comparison_rows.append(
+            {
+                "driver": row.get("driver"),
+                "team": row.get("team"),
+                "expected_rank": expected_rank,
+                "actual_position": actual_position,
+                "delta_positions": delta,
+                "expected_position": row.get("expected_position"),
+                "pole_probability": row.get("pole_probability"),
+            }
+        )
+
+    comparison_rows.sort(
+        key=lambda item: (
+            abs(int(item["delta_positions"])) if isinstance(item.get("delta_positions"), int) else -1,
+            -(int(item["delta_positions"]) if isinstance(item.get("delta_positions"), int) else -999),
+        ),
+        reverse=True,
+    )
+
+    driver_details = {}
+    for row in expected_grid_rows:
+        actual_position = row.get("actual_position")
+        expected_rank = expected_rank_by_driver.get(str(row.get("driver")))
+        delta = actual_position - expected_rank if isinstance(actual_position, int) and expected_rank is not None else None
+        explanation_bits = []
+        model_adj = float(row.get("model_adjustment_s") or 0.0)
+        if model_adj < -0.01:
+            explanation_bits.append("Model gives this driver a small pace boost from recent form and teammate-relative trend.")
+        elif model_adj > 0.01:
+            explanation_bits.append("Model applies a small caution penalty from recent form and teammate-relative trend.")
+        else:
+            explanation_bits.append("Model keeps this driver close to the raw round pace baseline.")
+        if float(row.get("pole_probability") or 0.0) >= 0.2:
+            explanation_bits.append("Strong pole probability suggests a realistic front-row threat.")
+        elif float(row.get("q1_elimination_probability") or 0.0) >= 0.25:
+            explanation_bits.append("High Q1 elimination risk means the floor is still fragile.")
+        driver_details[str(row.get("driver"))] = {
+            "driver": row.get("driver"),
+            "team": row.get("team"),
+            "profile_label": row.get("profile_label"),
+            "expected_rank": expected_rank,
+            "actual_position": actual_position,
+            "delta_positions": delta,
+            "expected_position": row.get("expected_position"),
+            "baseline": {
+                "q1": row.get("baseline_q1"),
+                "q2": row.get("baseline_q2"),
+                "q3": row.get("baseline_q3"),
+            },
+            "adjustments": {
+                "recent_form_s": row.get("recent_position_component_s"),
+                "teammate_s": row.get("teammate_component_s"),
+                "season_form_s": row.get("form_adjustment_s"),
+                "total_s": row.get("model_adjustment_s"),
+            },
+            "recent_context": {
+                "avg_position": row.get("recent_avg_position"),
+                "rounds_used": row.get("recent_rounds_used"),
+                "teammate_gap_s": row.get("teammate_gap_s"),
+            },
+            "probabilities": {
+                "pole": row.get("pole_probability"),
+                "front_row": row.get("front_row_probability"),
+                "q3": row.get("q3_probability"),
+                "q2_elimination": row.get("q2_elimination_probability"),
+                "q1_elimination": row.get("q1_elimination_probability"),
+            },
+            "top_outcomes": row.get("top_outcomes"),
+            "explanations": explanation_bits,
+        }
+
+    def _top_driver(metric: str) -> dict | None:
+        if not expected_grid_rows:
+            return None
+        return max(
+            expected_grid_rows,
+            key=lambda row: (float(row.get(metric) or 0.0), -(float(row.get("expected_position") or 999))),
+        )
+
+    q2_bubble = min(
+        expected_grid_rows,
+        key=lambda row: abs(float(row.get("q3_probability") or 0.0) - 0.5),
+    ) if expected_grid_rows else None
+
+    payload = {
+        "season": season,
+        "round": round_no,
+        "race": round_payload.get("race"),
+        "track": round_payload.get("track"),
+        "simulations": rounded_simulations,
+        "field_size": field_size,
+        "cutoffs": {
+            "q2": q2_count,
+            "q3": q3_count,
+        },
+        "inputs": {
+            "chaos": round(rounded_chaos, 3),
+            "form_bias": round(rounded_form_bias, 3),
+        },
+        "transparency": {
+            "weights": {
+                "raw_round_pace": 0.68,
+                "recent_quali_trend_and_teammate_context": 0.32,
+                "season_form_bias_slider_cap_s": 0.22,
+            },
+            "attempts_by_session": attempts_by_session,
+            "chaos": {
+                "variance_multiplier": round(chaos_multiplier, 3),
+                "incident_risk": round(incident_risk, 3),
+                "miracle_lap_risk": round(miracle_risk, 3),
+            },
+        },
+        "assumptions": {
+            "model": "Session-by-session Monte Carlo using round-specific qualifying references, recent qualifying trend, teammate-relative context, and optional season-form bias.",
+            "notes": [
+                "Reference means come from actual Q1/Q2/Q3 times when available, with missing sessions inferred from median session deltas.",
+                "Recent qualifying trend and teammate-relative pace slightly reshape the baseline before randomness is applied.",
+                "Form bias nudges season leaders slightly forward without overpowering the round-specific pace picture.",
+                "Chaos increases variance and the chance of a compromised or exceptional lap.",
+            ],
+            "session_deltas": {
+                "q2_minus_q1_s": references_payload["median_q2_delta"],
+                "q3_minus_q2_s": references_payload["median_q3_delta"],
+            },
+        },
+        "cards": {
+            "pole_favorite": _top_driver("pole_probability"),
+            "front_row_favorite": _top_driver("front_row_probability"),
+            "bubble_driver": q2_bubble,
+        },
+        "reference_grid": [
+            {
+                "position": int(row.get("position", 0) or 0),
+                "driver": row.get("driver"),
+                "q1": row.get("q1"),
+                "q2": row.get("q2"),
+                "q3": row.get("q3"),
+            }
+            for row in qualifying_rows
+        ],
+        "expected_grid": expected_grid_rows,
+        "comparison": comparison_rows,
+        "driver_details": driver_details,
+        "heatmap": heatmap_rows,
+        "session_average_best_lap_s": {
+            "q1": round(session_time_totals["q1"] / max(rounded_simulations * field_size, 1), 3),
+            "q2": round(session_time_totals["q2"] / max(rounded_simulations * q2_count, 1), 3),
+            "q3": round(session_time_totals["q3"] / max(rounded_simulations * q3_count, 1), 3),
+        },
+    }
+    QUALI_SIM_CACHE[cache_key] = payload
+    return payload
+
+
 def _fallback_positions(round_payload: dict, season: int, round_no: int, session_kind: str = "race") -> dict:
     normalized_session = str(session_kind or "race").strip().lower()
     if normalized_session not in {"race", "sprint"}:
@@ -3352,6 +3945,19 @@ def engineering_round_telemetry_trace(
         },
         "samples": samples,
     }
+
+
+@app.get("/api/engineering/quali-simulator/{round_no}")
+def engineering_quali_simulator(
+    round_no: int,
+    season: int = Query(2025),
+    simulations: int = Query(5000, ge=400, le=20000),
+    chaos: float = Query(0.0, ge=0.0, le=1.0),
+    form_bias: float = Query(0.0, ge=0.0, le=1.0),
+) -> dict:
+    if season not in SUPPORTED_SEASONS:
+        season = 2025
+    return build_qualifying_simulator(season, round_no, simulations, chaos, form_bias)
 
 
 @app.post("/api/engineering/telemetry/analyze")

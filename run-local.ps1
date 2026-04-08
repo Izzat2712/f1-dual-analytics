@@ -93,7 +93,7 @@ Stop-MatchingProcesses -CommandPattern "*npm run dev*--port $FrontendPort*" -Lab
 Stop-MatchingProcesses -CommandPattern "*vite*--port $FrontendPort*" -Label "frontend"
 
 Write-Host "Starting backend on http://localhost:$BackendPort ..."
-$backendCmd = "cd `"$backendDir`"; & `"$venvPython`" -m uvicorn app.main:app --host 127.0.0.1 --port $BackendPort"
+$backendCmd = "cd `"$backendDir`"; & `"$venvPython`" -m uvicorn app.main:app --host 127.0.0.1 --port $BackendPort --reload"
 Start-Process powershell -ArgumentList "-NoProfile", "-NoExit", "-Command", $backendCmd | Out-Null
 
 Write-Host "Waiting for backend health check..."

@@ -115,3 +115,24 @@ export async function getEngineeringTelemetryTrace(roundNo, season, driver, lap 
   }
   return res.json();
 }
+
+export async function getEngineeringQualiSimulator(roundNo, season, simulations = 5000, chaos = 0, formBias = 0) {
+  const query = new URLSearchParams({
+    season: String(season),
+    simulations: String(simulations),
+    chaos: String(chaos),
+    form_bias: String(formBias),
+  });
+  const res = await fetch(`${API_BASE}/api/engineering/quali-simulator/${roundNo}?${query.toString()}`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const body = await res.json();
+      detail = body?.detail ? `: ${body.detail}` : "";
+    } catch {
+      // Ignore body parse failures; keep generic message.
+    }
+    throw new Error(`Failed to load qualifying simulator (${res.status})${detail}`);
+  }
+  return res.json();
+}
