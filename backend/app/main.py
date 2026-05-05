@@ -19,7 +19,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sklearn.linear_model import LinearRegression
 
-from .season_data import BASE, SUPPORTED_SEASONS, fetch, load_or_build_season, map_driver, normalize_constructor_name, season_file
+from .season_data import (
+    BASE,
+    SUPPORTED_SEASONS,
+    fetch,
+    load_or_build_season,
+    map_driver,
+    normalize_constructor_name,
+    power_unit_for_team,
+    season_file,
+)
 
 app = FastAPI(title="F1 Dual-Mode Analytics API", version="0.1.0")
 OPENF1_BASE = "https://api.openf1.org/v1"
@@ -175,6 +184,305 @@ SEASON_SESSION_SCHEDULE_CACHE: dict[int, list[dict]] = {}
 QUALI_SIM_CACHE: dict[tuple[int, int, int, int, int], dict] = {}
 POSITIONS_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "positions_cache"
 POSITIONS_CACHE_VERSION = 15
+LIVE_ROUND_OFFSET_BY_SEASON = {
+    2026: 2,
+}
+LIVE_RESULT_ROUND_OVERRIDES = {
+    (2026, 6): 4,  # Bahrain and Saudi Arabia were cancelled; Miami remains local Round 6.
+}
+CANCELLED_ROUNDS_BY_SEASON = {
+    2026: {4, 5},
+}
+LIVE_OVERLAY_APPLIED: set[int] = set()
+DRIVER_NAME_ALIASES_BY_SEASON = {
+    2026: {
+        "andrea kimi antonelli": "Kimi Antonelli",
+        "nico hulkenberg": "Nico Hulkenberg",
+        "sergio perez": "Sergio Perez",
+    },
+}
+
+
+def external_round_no(season: int, round_no: int) -> int | None:
+    if round_no in CANCELLED_ROUNDS_BY_SEASON.get(season, set()):
+        return None
+    override = LIVE_RESULT_ROUND_OVERRIDES.get((season, round_no))
+    if override:
+        return override
+    offset = LIVE_ROUND_OFFSET_BY_SEASON.get(season, 0)
+    if offset and round_no > max(CANCELLED_ROUNDS_BY_SEASON.get(season, {0})):
+        return max(1, round_no - offset)
+    return round_no
+
+
+def local_round_no_from_external(season: int, live_round_no: int) -> int:
+    offset = LIVE_ROUND_OFFSET_BY_SEASON.get(season, 0)
+    if offset and live_round_no >= 4:
+        return live_round_no + offset
+    return live_round_no
+
+
+def is_cancelled_round(season: int, round_no: int) -> bool:
+    return round_no in CANCELLED_ROUNDS_BY_SEASON.get(season, set())
+
+
+def canonical_driver_name(season: int, name: str | None) -> str:
+    raw = str(name or "").strip()
+    key = unicodedata.normalize("NFD", raw)
+    key = "".join(ch for ch in key if unicodedata.category(ch) != "Mn").lower()
+    return DRIVER_NAME_ALIASES_BY_SEASON.get(season, {}).get(key, raw)
+
+
+def map_live_driver(season: int, driver: dict) -> str:
+    return canonical_driver_name(season, map_driver(driver))
+
+
+def result_time_value(row: dict) -> str:
+    time_payload = row.get("Time", {}) if isinstance(row.get("Time"), dict) else {}
+    return time_payload.get("time") or f"+{time_payload.get('millis', '-')}"
+
+
+def map_result_row(season: int, row: dict) -> dict:
+    return {
+        "position": int(row.get("position", 0) or 0),
+        "driver": map_live_driver(season, row.get("Driver", {})),
+        "team": normalize_constructor_name(season, row.get("Constructor", {}).get("name")),
+        "time": result_time_value(row),
+        "points": float(row.get("points", 0) or 0),
+        "grid": int(row.get("grid", 0) or 0),
+        "status": row.get("status", ""),
+    }
+
+
+def map_qualifying_row(season: int, row: dict) -> dict:
+    return {
+        "position": int(row.get("position", 0) or 0),
+        "driver": map_live_driver(season, row.get("Driver", {})),
+        "q1": row.get("Q1") or None,
+        "q2": row.get("Q2") or None,
+        "q3": row.get("Q3") or None,
+    }
+
+
+def map_sprint_row(season: int, row: dict) -> dict:
+    return {
+        "position": int(row.get("position", 0) or 0),
+        "driver": map_live_driver(season, row.get("Driver", {})),
+        "team": normalize_constructor_name(season, row.get("Constructor", {}).get("name")),
+        "points": float(row.get("points", 0) or 0),
+        "time": row.get("Time", {}).get("time") if isinstance(row.get("Time"), dict) else None,
+    }
+
+
+def map_sprint_qualifying_rows(season: int, sprint_rows: list[dict]) -> list[dict]:
+    rows = []
+    for row in sprint_rows:
+        rows.append(
+            {
+                "position": int(row.get("grid", 0) or 0),
+                "driver": map_live_driver(season, row.get("Driver", {})),
+                "team": normalize_constructor_name(season, row.get("Constructor", {}).get("name")),
+                "sq1": None,
+                "sq2": None,
+                "sq3": None,
+            }
+        )
+    return sorted(rows, key=lambda item: item["position"] or 999)
+
+
+def build_live_summary(season: int, local_round_no: int, race_payload: dict, quali_payload: dict | None, sprint_payload: dict | None) -> dict:
+    race_results = race_payload.get("Results", []) or []
+    quali_results = (quali_payload or {}).get("QualifyingResults", []) or []
+    sprint_results = (sprint_payload or {}).get("SprintResults", []) or []
+    race_winner = race_results[0] if race_results else {}
+    fastest_lap = next((item for item in race_results if item.get("FastestLap", {}).get("rank") == "1"), None)
+    return {
+        "round": local_round_no,
+        "race_name": race_payload.get("raceName"),
+        "date": race_payload.get("date"),
+        "circuit": race_payload.get("Circuit", {}).get("circuitName"),
+        "country": race_payload.get("Circuit", {}).get("Location", {}).get("country"),
+        "winner": map_live_driver(season, race_winner.get("Driver", {})) if race_winner else None,
+        "winner_team": normalize_constructor_name(season, race_winner.get("Constructor", {}).get("name")) if race_winner else None,
+        "pole": map_live_driver(season, quali_results[0]["Driver"]) if quali_results else None,
+        "pole_time": quali_results[0].get("Q3") if quali_results else None,
+        "fastest_lap_driver": map_live_driver(season, fastest_lap.get("Driver", {})) if fastest_lap else None,
+        "fastest_lap_time": (fastest_lap or {}).get("FastestLap", {}).get("Time", {}).get("time"),
+        "had_sprint": len(sprint_results) > 0,
+    }
+
+
+def fetch_live_race(season: int, local_round_no: int, endpoint: str) -> dict | None:
+    live_round = external_round_no(season, local_round_no)
+    if live_round is None:
+        return None
+    payload = fetch(f"{season}/{live_round}/{endpoint}.json")
+    races = payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
+    return races[0] if races else None
+
+
+def recompute_standings_from_rounds(data: dict) -> None:
+    driver_rows = {row.get("driver"): dict(row) for row in data.get("driver_standings", []) if row.get("driver")}
+    constructor_rows = {row.get("team"): dict(row) for row in data.get("constructor_standings", []) if row.get("team")}
+    driver_points = {driver: 0.0 for driver in driver_rows}
+    constructor_points = {team: 0.0 for team in constructor_rows}
+    driver_wins = {driver: 0 for driver in driver_rows}
+    constructor_wins = {team: 0 for team in constructor_rows}
+    driver_podiums = {driver: 0 for driver in driver_rows}
+    constructor_podiums = {team: 0 for team in constructor_rows}
+    points_progression: list[dict] = []
+    constructor_progression: list[dict] = []
+
+    for round_payload in sorted(data.get("rounds", []), key=lambda item: int(item.get("round", 0) or 0)):
+        results = round_payload.get("results") or []
+        sprint = round_payload.get("sprint") or []
+        if not results and not sprint:
+            continue
+        for section in (sprint, results):
+            for row in section:
+                driver = row.get("driver")
+                team = row.get("team")
+                points = float(row.get("points", 0) or 0)
+                if driver:
+                    driver_points[driver] = round(driver_points.get(driver, 0.0) + points, 1)
+                    driver_rows.setdefault(driver, {"driver": driver, "team": team, "wins": 0, "podiums": 0})
+                if team:
+                    constructor_points[team] = round(constructor_points.get(team, 0.0) + points, 1)
+                    constructor_rows.setdefault(team, {"team": team, "wins": 0, "podiums": 0})
+        for row in results:
+            driver = row.get("driver")
+            team = row.get("team")
+            try:
+                position = int(row.get("position", 0) or 0)
+            except (TypeError, ValueError):
+                continue
+            if position == 1:
+                driver_wins[driver] = driver_wins.get(driver, 0) + 1
+                constructor_wins[team] = constructor_wins.get(team, 0) + 1
+            if 1 <= position <= 3:
+                driver_podiums[driver] = driver_podiums.get(driver, 0) + 1
+                constructor_podiums[team] = constructor_podiums.get(team, 0) + 1
+
+        progression_row = {"round": int(round_payload.get("round", 0) or 0)}
+        for driver in data.get("progression_drivers", []):
+            progression_row[driver] = round(driver_points.get(driver, 0.0), 1)
+        points_progression.append(progression_row)
+
+        constructor_row = {"round": int(round_payload.get("round", 0) or 0)}
+        for team in data.get("progression_constructors", []):
+            constructor_row[team] = round(constructor_points.get(team, 0.0), 1)
+        constructor_progression.append(constructor_row)
+
+    data["driver_standings"] = [
+        {
+            "position": idx,
+            "driver": driver,
+            "points": round(driver_points.get(driver, 0.0), 1),
+            "wins": driver_wins.get(driver, 0),
+            "podiums": driver_podiums.get(driver, 0),
+            "team": driver_rows.get(driver, {}).get("team"),
+        }
+        for idx, driver in enumerate(
+            sorted(driver_rows, key=lambda name: (-driver_points.get(name, 0.0), -driver_wins.get(name, 0), name)),
+            start=1,
+        )
+    ]
+    data["constructor_standings"] = [
+        {
+            "position": idx,
+            "team": team,
+            "points": round(constructor_points.get(team, 0.0), 1),
+            "wins": constructor_wins.get(team, 0),
+            "podiums": constructor_podiums.get(team, 0),
+        }
+        for idx, team in enumerate(
+            sorted(constructor_rows, key=lambda name: (-constructor_points.get(name, 0.0), -constructor_wins.get(name, 0), name)),
+            start=1,
+        )
+    ]
+    data["points_progression"] = points_progression
+    data["constructor_points_progression"] = constructor_progression
+
+    power_unit_totals: dict[str, float] = {}
+    constructor_power_units = []
+    for row in data["constructor_standings"]:
+        team = row.get("team")
+        power_unit = power_unit_for_team(int(data.get("season", 0) or 0), team)
+        if not team or not power_unit:
+            continue
+        constructor_power_units.append({"team": team, "power_unit": power_unit})
+        power_unit_totals[power_unit] = round(power_unit_totals.get(power_unit, 0.0) + float(row.get("points", 0) or 0), 1)
+
+    progression_power_units = sorted(power_unit_totals, key=lambda item: (-power_unit_totals[item], item))
+    power_unit_progression = []
+    for row in constructor_progression:
+        power_unit_row = {"round": row["round"]}
+        for team in data.get("progression_constructors", []):
+            power_unit = power_unit_for_team(int(data.get("season", 0) or 0), team)
+            if not power_unit:
+                continue
+            power_unit_row[power_unit] = round(power_unit_row.get(power_unit, 0.0) + float(row.get(team, 0) or 0), 1)
+        for power_unit in progression_power_units:
+            power_unit_row.setdefault(power_unit, 0.0)
+        power_unit_progression.append(power_unit_row)
+
+    data["constructor_power_units"] = constructor_power_units
+    data["progression_power_units"] = progression_power_units
+    data["power_unit_points_progression"] = power_unit_progression
+    data["power_unit_standings"] = [
+        {
+            "position": idx,
+            "power_unit": power_unit,
+            "points": round(power_unit_totals.get(power_unit, 0.0), 1),
+            "teams": [item["team"] for item in constructor_power_units if item["power_unit"] == power_unit],
+        }
+        for idx, power_unit in enumerate(progression_power_units, start=1)
+    ]
+
+
+def apply_live_round_overlay(data: dict) -> None:
+    season = int(data.get("season", 0) or 0)
+    if season in LIVE_OVERLAY_APPLIED:
+        return
+    if season != 2026:
+        LIVE_OVERLAY_APPLIED.add(season)
+        return
+
+    rounds_by_no = {int(item.get("round", 0) or 0): item for item in data.get("rounds", [])}
+    for (override_season, local_round_no), _live_round_no in LIVE_RESULT_ROUND_OVERRIDES.items():
+        if override_season != season:
+            continue
+        round_payload = rounds_by_no.get(local_round_no)
+        if not round_payload:
+            continue
+        try:
+            race_payload = fetch_live_race(season, local_round_no, "results")
+            if not race_payload or not race_payload.get("Results"):
+                continue
+            if race_payload.get("raceName") != round_payload.get("race"):
+                continue
+            quali_payload = fetch_live_race(season, local_round_no, "qualifying")
+            sprint_payload = fetch_live_race(season, local_round_no, "sprint")
+        except Exception:
+            continue
+
+        location = race_payload.get("Circuit", {}).get("Location", {})
+        round_payload["date"] = race_payload.get("date")
+        round_payload["track"] = {
+            "name": race_payload.get("Circuit", {}).get("circuitName"),
+            "country": location.get("country"),
+            "locality": location.get("locality"),
+        }
+        round_payload["results"] = [map_result_row(season, row) for row in race_payload.get("Results", [])]
+        round_payload["qualifying"] = [map_qualifying_row(season, row) for row in (quali_payload or {}).get("QualifyingResults", [])]
+        sprint_rows = (sprint_payload or {}).get("SprintResults", [])
+        round_payload["sprint"] = [map_sprint_row(season, row) for row in sprint_rows]
+        round_payload["sprint_qualifying"] = map_sprint_qualifying_rows(season, sprint_rows)
+        round_payload["summary"] = build_live_summary(season, local_round_no, race_payload, quali_payload, sprint_payload)
+
+    data["rounds_summary"] = [round_payload.get("summary") for round_payload in data.get("rounds", []) if round_payload.get("summary")]
+    recompute_standings_from_rounds(data)
+    LIVE_OVERLAY_APPLIED.add(season)
 
 
 def get_season_cache_mtime_ns(season: int) -> int | None:
@@ -197,10 +505,12 @@ def get_season_data(season: int) -> dict:
     cached_mtime_ns = SEASON_CACHE_MTIME_NS.get(season)
     if season not in SEASON_CACHE or cached_mtime_ns != current_mtime_ns:
         try:
+            LIVE_OVERLAY_APPLIED.discard(season)
             SEASON_CACHE[season] = load_or_build_season(season)
             SEASON_CACHE_MTIME_NS[season] = get_season_cache_mtime_ns(season)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Failed to load season {season}: {exc}") from exc
+    apply_live_round_overlay(SEASON_CACHE[season])
     return SEASON_CACHE[season]
 
 
@@ -258,9 +568,12 @@ def get_round_session_schedule(season: int, round_no: int) -> list[dict]:
     cached = ROUND_SESSION_SCHEDULE_CACHE.get(key)
     if cached:
         return cached
+    live_round = external_round_no(season, round_no)
+    if live_round is None:
+        return []
 
     try:
-        payload = fetch(f"{season}/{round_no}.json")
+        payload = fetch(f"{season}/{live_round}.json")
         races = payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
         race = races[0] if races else {}
         schedule = extract_round_session_schedule(race)
@@ -283,10 +596,14 @@ def get_season_session_schedule(season: int) -> list[dict]:
         races = payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
         rounds: list[dict] = []
         for race in races:
+            live_round = int(race.get("round", 0) or 0)
+            local_round = local_round_no_from_external(season, live_round)
+            if is_cancelled_round(season, local_round):
+                continue
             schedule = extract_round_session_schedule(race)
             rounds.append(
                 {
-                    "round": int(race.get("round", 0) or 0),
+                    "round": local_round,
                     "race_name": race.get("raceName"),
                     "track": {
                         "name": race.get("Circuit", {}).get("circuitName"),
@@ -652,8 +969,11 @@ def load_lap_times_by_driver(
 ) -> tuple[dict[str, dict[int, float]], int]:
     lap_times_by_driver: dict[str, dict[int, float]] = {}
     max_lap = 0
+    live_round = external_round_no(season, round_no)
+    if live_round is None:
+        return lap_times_by_driver, max_lap
 
-    first_page = fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=100, offset=0)
+    first_page = fetch_positions_fast(f"{season}/{live_round}/laps.json", limit=100, offset=0)
     first_mr = first_page.get("MRData", {})
     try:
         total_rows = int(first_mr.get("total", 0))
@@ -664,7 +984,7 @@ def load_lap_times_by_driver(
 
     all_pages = [first_page]
     for offset in range(limit_rows, total_rows, limit_rows):
-        all_pages.append(fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=limit_rows, offset=offset))
+        all_pages.append(fetch_positions_fast(f"{season}/{live_round}/laps.json", limit=limit_rows, offset=offset))
 
     for page in all_pages:
         page_races = page.get("MRData", {}).get("RaceTable", {}).get("Races", [])
@@ -696,8 +1016,11 @@ def load_pit_laps_by_driver(
     driver_id_to_name: dict[str, str],
 ) -> dict[str, list[int]]:
     pit_laps_by_driver: dict[str, set[int]] = {}
+    live_round = external_round_no(season, round_no)
+    if live_round is None:
+        return {}
     try:
-        first_page = fetch_positions_fast(f"{season}/{round_no}/pitstops.json", limit=200, offset=0)
+        first_page = fetch_positions_fast(f"{season}/{live_round}/pitstops.json", limit=200, offset=0)
     except Exception:
         return {}
 
@@ -712,7 +1035,7 @@ def load_pit_laps_by_driver(
     all_pages = [first_page]
     for offset in range(limit_rows, total_rows, limit_rows):
         try:
-            all_pages.append(fetch_positions_fast(f"{season}/{round_no}/pitstops.json", limit=limit_rows, offset=offset))
+            all_pages.append(fetch_positions_fast(f"{season}/{live_round}/pitstops.json", limit=limit_rows, offset=offset))
         except Exception:
             break
 
@@ -2231,9 +2554,12 @@ def _build_openf1_telemetry_trace(
 
 def load_official_results_rows(season: int, round_no: int, session_kind: str = "race") -> list[dict]:
     normalized_session = str(session_kind or "race").strip().lower()
-    endpoint = f"{season}/{round_no}/results.json"
+    live_round = external_round_no(season, round_no)
+    if live_round is None:
+        return []
+    endpoint = f"{season}/{live_round}/results.json"
     if normalized_session == "sprint":
-        endpoint = f"{season}/{round_no}/sprint.json"
+        endpoint = f"{season}/{live_round}/sprint.json"
     # Try fast path first, then resilient shared fetch fallback.
     try:
         payload = fetch_positions_fast(endpoint)
@@ -2757,6 +3083,9 @@ def casual_rounds(season: int = Query(2025)) -> dict:
     rounds_summary = []
     for item in season_data.get("rounds_summary", []):
         summary = dict(item)
+        summary_round = int(summary.get("round", 0) or 0)
+        if is_cancelled_round(season_data["season"], summary_round):
+            continue
         round_payload = rounds_payload.get(int(summary.get("round", 0) or 0), {})
         sprint_rows = round_payload.get("sprint") or []
         sprint_winner = None
@@ -3545,7 +3874,11 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
             save_positions_to_disk(payload)
             return payload
 
-        first_page = fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=100, offset=0)
+        live_round = external_round_no(season, round_no)
+        if live_round is None:
+            return _empty_positions_payload(round_payload, season, round_no, normalized_session)
+
+        first_page = fetch_positions_fast(f"{season}/{live_round}/laps.json", limit=100, offset=0)
         first_mr = first_page.get("MRData", {})
         try:
             total_rows = int(first_mr.get("total", 0))
@@ -3556,7 +3889,7 @@ def build_round_positions(season: int, round_no: int, session_kind: str = "race"
 
         all_pages = [first_page]
         for offset in range(limit_rows, total_rows, limit_rows):
-            all_pages.append(fetch_positions_fast(f"{season}/{round_no}/laps.json", limit=limit_rows, offset=offset))
+            all_pages.append(fetch_positions_fast(f"{season}/{live_round}/laps.json", limit=limit_rows, offset=offset))
 
         lap_map: dict[int, dict] = {}
         lap_timing_seconds: dict[int, dict[str, float]] = {}
