@@ -184,15 +184,9 @@ SEASON_SESSION_SCHEDULE_CACHE: dict[int, list[dict]] = {}
 QUALI_SIM_CACHE: dict[tuple[int, int, int, int, int], dict] = {}
 POSITIONS_CACHE_DIR = Path(__file__).resolve().parents[1] / "data" / "positions_cache"
 POSITIONS_CACHE_VERSION = 15
-LIVE_ROUND_OFFSET_BY_SEASON = {
-    2026: 2,
-}
-LIVE_RESULT_ROUND_OVERRIDES = {
-    (2026, 6): 4,  # Bahrain and Saudi Arabia were cancelled; Miami remains local Round 6.
-}
-CANCELLED_ROUNDS_BY_SEASON = {
-    2026: {4, 5},
-}
+LIVE_ROUND_OFFSET_BY_SEASON = {}
+LIVE_RESULT_ROUND_OVERRIDES = {}
+CANCELLED_ROUNDS_BY_SEASON = {}
 LIVE_OVERLAY_APPLIED: set[int] = set()
 DRIVER_NAME_ALIASES_BY_SEASON = {
     2026: {

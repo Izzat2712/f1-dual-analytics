@@ -167,6 +167,21 @@ def parse_int(value: object, default: int = 0) -> int:
         return default
 
 
+def format_result_time(result: dict) -> str:
+    time_payload = result.get("Time", {})
+    if time_payload.get("time"):
+        return time_payload["time"]
+    if time_payload.get("millis"):
+        return f"+{time_payload['millis']}"
+
+    status = result.get("status")
+    if status == "Did not start":
+        return "DNS"
+    if status == "Retired":
+        return "DNF"
+    return status or "N/A"
+
+
 def normalize_constructor_name(season: int, constructor_name: str | None) -> str | None:
     if not constructor_name:
         return constructor_name
@@ -480,7 +495,6 @@ def build_season_dataset(season: int) -> dict:
 
         results = []
         for res in race_payload.get("Results", []):
-            time_value = res.get("Time", {}).get("time") or f"+{res.get('Time', {}).get('millis', '-')}"
             driver_name = map_driver(res["Driver"])
             constructor_name = normalize_constructor_name(season, res["Constructor"]["name"])
             race_points = float(res["points"])
@@ -489,7 +503,7 @@ def build_season_dataset(season: int) -> dict:
                     "position": parse_int(res.get("position")),
                     "driver": driver_name,
                     "team": constructor_name,
-                    "time": time_value,
+                    "time": format_result_time(res),
                     "points": race_points,
                     "grid": parse_int(res.get("grid")),
                     "status": res["status"],
@@ -507,6 +521,7 @@ def build_season_dataset(season: int) -> dict:
                     {
                         "position": parse_int(q.get("position")),
                         "driver": map_driver(q["Driver"]),
+                        "team": normalize_constructor_name(season, q["Constructor"]["name"]),
                         "q1": q.get("Q1"),
                         "q2": q.get("Q2"),
                         "q3": q.get("Q3"),
