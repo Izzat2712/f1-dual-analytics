@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query, WebSocket
@@ -32,6 +32,11 @@ from .season_data import (
 
 app = FastAPI(title="F1 Dual-Mode Analytics API", version="0.1.0")
 OPENF1_BASE = "https://api.openf1.org/v1"
+OPENF1_TOKEN_URL = "https://api.openf1.org/token"
+OPENF1_ACCESS_TOKEN = os.getenv("OPENF1_ACCESS_TOKEN", "").strip()
+OPENF1_USERNAME = os.getenv("OPENF1_USERNAME", "").strip()
+OPENF1_PASSWORD = os.getenv("OPENF1_PASSWORD", "").strip()
+OPENF1_TOKEN_CACHE: dict[str, str | float] = {"access_token": "", "expires_at": 0.0}
 
 raw_origins = os.getenv("CORS_ALLOW_ORIGINS", "*")
 allow_origins = [item.strip() for item in raw_origins.split(",") if item.strip()]
@@ -1128,8 +1133,8 @@ def build_tyre_strategy(round_payload: dict, season: int, round_no: int, session
             "drivers": [],
             "source": "unavailable",
             "notes": {
-                "compound": "",
-                "metrics": "",
+                "compound": "Real tyre compound history requires OpenF1 access. Set OPENF1_ACCESS_TOKEN to enable the OpenF1 stints endpoint.",
+                "metrics": "Tyre strategy is hidden when OpenF1 is unavailable because Jolpica pit stops do not include actual compounds.",
             },
         }
 
@@ -2593,6 +2598,43 @@ def fetch_positions_fast(path: str, **query: str | int) -> dict:
             raise
 
 
+def get_openf1_access_token(force_refresh: bool = False) -> str:
+    if OPENF1_ACCESS_TOKEN and not force_refresh:
+        return OPENF1_ACCESS_TOKEN
+    if not OPENF1_USERNAME or not OPENF1_PASSWORD:
+        return ""
+
+    now = time.time()
+    cached_token = str(OPENF1_TOKEN_CACHE.get("access_token") or "")
+    try:
+        expires_at = float(OPENF1_TOKEN_CACHE.get("expires_at") or 0.0)
+    except (TypeError, ValueError):
+        expires_at = 0.0
+    if cached_token and not force_refresh and expires_at > now + 60:
+        return cached_token
+
+    payload = urlencode({"username": OPENF1_USERNAME, "password": OPENF1_PASSWORD}).encode("utf-8")
+    request = Request(
+        OPENF1_TOKEN_URL,
+        data=payload,
+        headers={"Content-Type": "application/x-www-form-urlencoded", "accept": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=10) as response:
+        token_payload = json.loads(response.read().decode("utf-8"))
+
+    token = str(token_payload.get("access_token") or "").strip()
+    if not token:
+        return ""
+    try:
+        expires_in = float(token_payload.get("expires_in") or 3600)
+    except (TypeError, ValueError):
+        expires_in = 3600.0
+    OPENF1_TOKEN_CACHE["access_token"] = token
+    OPENF1_TOKEN_CACHE["expires_at"] = now + max(60.0, expires_in)
+    return token
+
+
 def fetch_openf1(
     path: str,
     *,
@@ -2603,13 +2645,22 @@ def fetch_openf1(
     qs = f"?{urlencode(query)}" if query else ""
     url = f"{OPENF1_BASE}/{path}{qs}"
     attempts = 0
+    refreshed_auth = False
     while True:
         attempts += 1
         try:
-            with urlopen(url, timeout=timeout_s) as response:
+            headers = {"accept": "application/json"}
+            access_token = get_openf1_access_token(force_refresh=refreshed_auth)
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+            request = Request(url, headers=headers)
+            with urlopen(request, timeout=timeout_s) as response:
                 data = json.loads(response.read().decode("utf-8"))
             return data if isinstance(data, list) else []
         except HTTPError as exc:
+            if exc.code == 401 and not refreshed_auth and OPENF1_USERNAME and OPENF1_PASSWORD:
+                refreshed_auth = True
+                continue
             if exc.code == 429 and attempts < max_attempts:
                 time.sleep(0.35 * attempts)
                 continue

@@ -3067,7 +3067,7 @@ function EngineeringPanel({ roundNo, season, race }) {
             </div>
           ) : null}
           {!tyreStrategyLoading && !tyreStrategyError && !hasSolidTyreStrategyData ? (
-            <div className="small">No solid tyre strategy data available yet.</div>
+            <div className="small">Tyre strategy is currently unavailable because OpenF1 is restricting access to real stint and compound data.</div>
           ) : null}
 
           {hasSolidTyreStrategyData ? <p className="small">{tyreStrategyData?.notes?.compound || ""}</p> : null}

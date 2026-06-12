@@ -62,4 +62,5 @@ Supports season and round navigation across `2021-2026`.
 
 - Primary race result/lap context: Jolpica/Ergast
 - Telemetry source: OpenF1 when available, otherwise synthetic fallback
+- Tyre strategy uses OpenF1 compounds when authenticated with `OPENF1_ACCESS_TOKEN`, or with `OPENF1_USERNAME` and `OPENF1_PASSWORD` so the backend can refresh tokens automatically; Jolpica pit-stop data is not used for compounds because it cannot identify real tyre choices.
 - Sprint qualifying is derived from sprint grid when direct source data is unavailable

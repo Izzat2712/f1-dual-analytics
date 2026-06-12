@@ -11,3 +11,9 @@ services:
         value: 3.11.11
       - key: CORS_ALLOW_ORIGINS
         sync: false
+      - key: OPENF1_ACCESS_TOKEN
+        sync: false
+      - key: OPENF1_USERNAME
+        sync: false
+      - key: OPENF1_PASSWORD
+        sync: false
