@@ -5,7 +5,7 @@
     {
       "position": 1,
       "driver": "Andrea Kimi Antonelli",
-      "points": 380.0,
+      "points": 390.0,
       "wins": 9,
       "team": "Mercedes",
       "podiums": 16
@@ -13,31 +13,31 @@
     {
       "position": 2,
       "driver": "Max Verstappen",
-      "points": 261.0,
+      "points": 279.0,
       "wins": 3,
       "team": "Red Bull",
-      "podiums": 11
+      "podiums": 12
     },
     {
       "position": 3,
-      "driver": "Lewis Hamilton",
-      "points": 259.0,
-      "wins": 1,
-      "team": "Ferrari",
-      "podiums": 7
-    },
-    {
-      "position": 4,
       "driver": "George Russell",
-      "points": 250.0,
+      "points": 262.0,
       "wins": 3,
       "team": "Mercedes",
       "podiums": 8
     },
     {
+      "position": 4,
+      "driver": "Lewis Hamilton",
+      "points": 261.0,
+      "wins": 1,
+      "team": "Ferrari",
+      "podiums": 7
+    },
+    {
       "position": 5,
       "driver": "Charles Leclerc",
-      "points": 245.0,
+      "points": 249.0,
       "wins": 1,
       "team": "Ferrari",
       "podiums": 6
@@ -45,15 +45,15 @@
     {
       "position": 6,
       "driver": "Lando Norris",
-      "points": 221.0,
-      "wins": 2,
+      "points": 246.0,
+      "wins": 3,
       "team": "McLaren",
-      "podiums": 5
+      "podiums": 6
     },
     {
       "position": 7,
       "driver": "Oscar Piastri",
-      "points": 144.0,
+      "points": 152.0,
       "wins": 0,
       "team": "McLaren",
       "podiums": 2
@@ -61,15 +61,15 @@
     {
       "position": 8,
       "driver": "Isack Hadjar",
-      "points": 107.0,
+      "points": 122.0,
       "wins": 0,
       "team": "Red Bull",
-      "podiums": 2
+      "podiums": 3
     },
     {
       "position": 9,
       "driver": "Liam Lawson",
-      "points": 83.0,
+      "points": 89.0,
       "wins": 0,
       "team": "RB F1 Team",
       "podiums": 0
@@ -117,7 +117,7 @@
     {
       "position": 15,
       "driver": "Nico H\u00fclkenberg",
-      "points": 13.0,
+      "points": 14.0,
       "wins": 0,
       "team": "Audi",
       "podiums": 0
@@ -193,41 +193,49 @@
       "wins": 0,
       "team": "Cadillac",
       "podiums": 0
+    },
+    {
+      "position": 25,
+      "driver": "Rafael Camara",
+      "points": 0.0,
+      "wins": 0,
+      "team": "Haas F1 Team",
+      "podiums": 0
     }
   ],
   "constructor_standings": [
     {
       "position": 1,
       "team": "Mercedes",
-      "points": 630.0,
+      "points": 652.0,
       "wins": 12,
       "podiums": 24
     },
     {
       "position": 2,
       "team": "Ferrari",
-      "points": 504.0,
+      "points": 510.0,
       "wins": 2,
       "podiums": 13
     },
     {
       "position": 3,
       "team": "Red Bull",
-      "points": 382.0,
+      "points": 415.0,
       "wins": 3,
-      "podiums": 13
+      "podiums": 15
     },
     {
       "position": 4,
       "team": "McLaren",
-      "points": 365.0,
-      "wins": 2,
-      "podiums": 7
+      "points": 398.0,
+      "wins": 3,
+      "podiums": 8
     },
     {
       "position": 5,
       "team": "RB F1 Team",
-      "points": 108.0,
+      "points": 114.0,
       "wins": 0,
       "podiums": 0
     },
@@ -248,7 +256,7 @@
     {
       "position": 8,
       "team": "Audi",
-      "points": 27.0,
+      "points": 28.0,
       "wins": 0,
       "podiums": 0
     },
@@ -277,8 +285,8 @@
   "progression_drivers": [
     "Andrea Kimi Antonelli",
     "Max Verstappen",
-    "Lewis Hamilton",
     "George Russell",
+    "Lewis Hamilton",
     "Charles Leclerc",
     "Lando Norris",
     "Oscar Piastri",
@@ -298,15 +306,16 @@
     "Ryo Hirakawa",
     "Lance Stroll",
     "Valtteri Bottas",
-    "Sergio P\u00e9rez"
+    "Sergio P\u00e9rez",
+    "Rafael Camara"
   ],
   "points_progression": [
     {
       "round": 1,
       "Andrea Kimi Antonelli": 18.0,
       "Max Verstappen": 8.0,
-      "Lewis Hamilton": 12.0,
       "George Russell": 25.0,
+      "Lewis Hamilton": 12.0,
       "Charles Leclerc": 15.0,
       "Lando Norris": 10.0,
       "Oscar Piastri": 0.0,
@@ -326,14 +335,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 2,
       "Andrea Kimi Antonelli": 47.0,
       "Max Verstappen": 8.0,
-      "Lewis Hamilton": 33.0,
       "George Russell": 51.0,
+      "Lewis Hamilton": 33.0,
       "Charles Leclerc": 34.0,
       "Lando Norris": 15.0,
       "Oscar Piastri": 3.0,
@@ -353,14 +363,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 3,
       "Andrea Kimi Antonelli": 72.0,
       "Max Verstappen": 12.0,
-      "Lewis Hamilton": 41.0,
       "George Russell": 63.0,
+      "Lewis Hamilton": 41.0,
       "Charles Leclerc": 49.0,
       "Lando Norris": 25.0,
       "Oscar Piastri": 21.0,
@@ -380,14 +391,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 4,
       "Andrea Kimi Antonelli": 100.0,
       "Max Verstappen": 26.0,
-      "Lewis Hamilton": 51.0,
       "George Russell": 80.0,
+      "Lewis Hamilton": 51.0,
       "Charles Leclerc": 59.0,
       "Lando Norris": 51.0,
       "Oscar Piastri": 43.0,
@@ -407,14 +419,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 5,
       "Andrea Kimi Antonelli": 131.0,
       "Max Verstappen": 43.0,
-      "Lewis Hamilton": 72.0,
       "George Russell": 88.0,
+      "Lewis Hamilton": 72.0,
       "Charles Leclerc": 75.0,
       "Lando Norris": 58.0,
       "Oscar Piastri": 48.0,
@@ -434,14 +447,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 6,
       "Andrea Kimi Antonelli": 156.0,
       "Max Verstappen": 43.0,
-      "Lewis Hamilton": 90.0,
       "George Russell": 88.0,
+      "Lewis Hamilton": 90.0,
       "Charles Leclerc": 75.0,
       "Lando Norris": 58.0,
       "Oscar Piastri": 60.0,
@@ -461,14 +475,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 7,
       "Andrea Kimi Antonelli": 156.0,
       "Max Verstappen": 55.0,
-      "Lewis Hamilton": 115.0,
       "George Russell": 106.0,
+      "Lewis Hamilton": 115.0,
       "Charles Leclerc": 75.0,
       "Lando Norris": 73.0,
       "Oscar Piastri": 70.0,
@@ -488,14 +503,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 8,
       "Andrea Kimi Antonelli": 171.0,
       "Max Verstappen": 73.0,
-      "Lewis Hamilton": 125.0,
       "George Russell": 131.0,
+      "Lewis Hamilton": 125.0,
       "Charles Leclerc": 79.0,
       "Lando Norris": 79.0,
       "Oscar Piastri": 82.0,
@@ -515,14 +531,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 9,
       "Andrea Kimi Antonelli": 179.0,
       "Max Verstappen": 76.0,
-      "Lewis Hamilton": 147.0,
       "George Russell": 154.0,
+      "Lewis Hamilton": 147.0,
       "Charles Leclerc": 108.0,
       "Lando Norris": 97.0,
       "Oscar Piastri": 84.0,
@@ -542,14 +559,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 10,
       "Andrea Kimi Antonelli": 204.0,
       "Max Verstappen": 91.0,
-      "Lewis Hamilton": 159.0,
       "George Russell": 154.0,
+      "Lewis Hamilton": 159.0,
       "Charles Leclerc": 126.0,
       "Lando Norris": 103.0,
       "Oscar Piastri": 94.0,
@@ -569,14 +587,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 11,
       "Andrea Kimi Antonelli": 219.0,
       "Max Verstappen": 109.0,
-      "Lewis Hamilton": 169.0,
       "George Russell": 160.0,
+      "Lewis Hamilton": 169.0,
       "Charles Leclerc": 138.0,
       "Lando Norris": 128.0,
       "Oscar Piastri": 94.0,
@@ -596,14 +615,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 12,
       "Andrea Kimi Antonelli": 242.0,
       "Max Verstappen": 112.0,
-      "Lewis Hamilton": 183.0,
       "George Russell": 183.0,
+      "Lewis Hamilton": 183.0,
       "Charles Leclerc": 155.0,
       "Lando Norris": 159.0,
       "Oscar Piastri": 106.0,
@@ -623,14 +643,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 13,
       "Andrea Kimi Antonelli": 267.0,
       "Max Verstappen": 127.0,
-      "Lewis Hamilton": 191.0,
       "George Russell": 201.0,
+      "Lewis Hamilton": 191.0,
       "Charles Leclerc": 155.0,
       "Lando Norris": 171.0,
       "Oscar Piastri": 116.0,
@@ -650,14 +671,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 14,
       "Andrea Kimi Antonelli": 292.0,
       "Max Verstappen": 145.0,
-      "Lewis Hamilton": 191.0,
       "George Russell": 211.0,
+      "Lewis Hamilton": 191.0,
       "Charles Leclerc": 167.0,
       "Lando Norris": 186.0,
       "Oscar Piastri": 120.0,
@@ -677,14 +699,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 15,
       "Andrea Kimi Antonelli": 302.0,
       "Max Verstappen": 163.0,
-      "Lewis Hamilton": 199.0,
       "George Russell": 236.0,
+      "Lewis Hamilton": 199.0,
       "Charles Leclerc": 179.0,
       "Lando Norris": 186.0,
       "Oscar Piastri": 120.0,
@@ -704,14 +727,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 16,
       "Andrea Kimi Antonelli": 320.0,
       "Max Verstappen": 188.0,
-      "Lewis Hamilton": 214.0,
       "George Russell": 236.0,
+      "Lewis Hamilton": 214.0,
       "Charles Leclerc": 191.0,
       "Lando Norris": 188.0,
       "Oscar Piastri": 128.0,
@@ -731,14 +755,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 17,
       "Andrea Kimi Antonelli": 340.0,
       "Max Verstappen": 221.0,
-      "Lewis Hamilton": 229.0,
       "George Russell": 238.0,
+      "Lewis Hamilton": 229.0,
       "Charles Leclerc": 215.0,
       "Lando Norris": 201.0,
       "Oscar Piastri": 138.0,
@@ -758,14 +783,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 18,
       "Andrea Kimi Antonelli": 365.0,
       "Max Verstappen": 236.0,
-      "Lewis Hamilton": 241.0,
       "George Russell": 242.0,
+      "Lewis Hamilton": 241.0,
       "Charles Leclerc": 233.0,
       "Lando Norris": 211.0,
       "Oscar Piastri": 144.0,
@@ -785,14 +811,15 @@
       "Ryo Hirakawa": 0.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 19,
       "Andrea Kimi Antonelli": 380.0,
       "Max Verstappen": 261.0,
-      "Lewis Hamilton": 259.0,
       "George Russell": 250.0,
+      "Lewis Hamilton": 259.0,
       "Charles Leclerc": 245.0,
       "Lando Norris": 221.0,
       "Oscar Piastri": 144.0,
@@ -812,25 +839,26 @@
       "Ryo Hirakawa": 1.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 20,
-      "Andrea Kimi Antonelli": 380.0,
-      "Max Verstappen": 261.0,
-      "Lewis Hamilton": 259.0,
-      "George Russell": 250.0,
-      "Charles Leclerc": 245.0,
-      "Lando Norris": 221.0,
-      "Oscar Piastri": 144.0,
-      "Isack Hadjar": 107.0,
-      "Liam Lawson": 83.0,
+      "Andrea Kimi Antonelli": 390.0,
+      "Max Verstappen": 279.0,
+      "George Russell": 262.0,
+      "Lewis Hamilton": 261.0,
+      "Charles Leclerc": 249.0,
+      "Lando Norris": 246.0,
+      "Oscar Piastri": 152.0,
+      "Isack Hadjar": 122.0,
+      "Liam Lawson": 89.0,
       "Pierre Gasly": 42.0,
       "Arvid Lindblad": 38.0,
       "Franco Colapinto": 27.0,
       "Oliver Bearman": 23.0,
       "Gabriel Bortoleto": 14.0,
-      "Nico H\u00fclkenberg": 13.0,
+      "Nico H\u00fclkenberg": 14.0,
       "Esteban Ocon": 7.0,
       "Fernando Alonso": 7.0,
       "Carlos Sainz": 7.0,
@@ -839,25 +867,26 @@
       "Ryo Hirakawa": 1.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 21,
-      "Andrea Kimi Antonelli": 380.0,
-      "Max Verstappen": 261.0,
-      "Lewis Hamilton": 259.0,
-      "George Russell": 250.0,
-      "Charles Leclerc": 245.0,
-      "Lando Norris": 221.0,
-      "Oscar Piastri": 144.0,
-      "Isack Hadjar": 107.0,
-      "Liam Lawson": 83.0,
+      "Andrea Kimi Antonelli": 390.0,
+      "Max Verstappen": 279.0,
+      "George Russell": 262.0,
+      "Lewis Hamilton": 261.0,
+      "Charles Leclerc": 249.0,
+      "Lando Norris": 246.0,
+      "Oscar Piastri": 152.0,
+      "Isack Hadjar": 122.0,
+      "Liam Lawson": 89.0,
       "Pierre Gasly": 42.0,
       "Arvid Lindblad": 38.0,
       "Franco Colapinto": 27.0,
       "Oliver Bearman": 23.0,
       "Gabriel Bortoleto": 14.0,
-      "Nico H\u00fclkenberg": 13.0,
+      "Nico H\u00fclkenberg": 14.0,
       "Esteban Ocon": 7.0,
       "Fernando Alonso": 7.0,
       "Carlos Sainz": 7.0,
@@ -866,25 +895,26 @@
       "Ryo Hirakawa": 1.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 22,
-      "Andrea Kimi Antonelli": 380.0,
-      "Max Verstappen": 261.0,
-      "Lewis Hamilton": 259.0,
-      "George Russell": 250.0,
-      "Charles Leclerc": 245.0,
-      "Lando Norris": 221.0,
-      "Oscar Piastri": 144.0,
-      "Isack Hadjar": 107.0,
-      "Liam Lawson": 83.0,
+      "Andrea Kimi Antonelli": 390.0,
+      "Max Verstappen": 279.0,
+      "George Russell": 262.0,
+      "Lewis Hamilton": 261.0,
+      "Charles Leclerc": 249.0,
+      "Lando Norris": 246.0,
+      "Oscar Piastri": 152.0,
+      "Isack Hadjar": 122.0,
+      "Liam Lawson": 89.0,
       "Pierre Gasly": 42.0,
       "Arvid Lindblad": 38.0,
       "Franco Colapinto": 27.0,
       "Oliver Bearman": 23.0,
       "Gabriel Bortoleto": 14.0,
-      "Nico H\u00fclkenberg": 13.0,
+      "Nico H\u00fclkenberg": 14.0,
       "Esteban Ocon": 7.0,
       "Fernando Alonso": 7.0,
       "Carlos Sainz": 7.0,
@@ -893,25 +923,26 @@
       "Ryo Hirakawa": 1.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     },
     {
       "round": 23,
-      "Andrea Kimi Antonelli": 380.0,
-      "Max Verstappen": 261.0,
-      "Lewis Hamilton": 259.0,
-      "George Russell": 250.0,
-      "Charles Leclerc": 245.0,
-      "Lando Norris": 221.0,
-      "Oscar Piastri": 144.0,
-      "Isack Hadjar": 107.0,
-      "Liam Lawson": 83.0,
+      "Andrea Kimi Antonelli": 390.0,
+      "Max Verstappen": 279.0,
+      "George Russell": 262.0,
+      "Lewis Hamilton": 261.0,
+      "Charles Leclerc": 249.0,
+      "Lando Norris": 246.0,
+      "Oscar Piastri": 152.0,
+      "Isack Hadjar": 122.0,
+      "Liam Lawson": 89.0,
       "Pierre Gasly": 42.0,
       "Arvid Lindblad": 38.0,
       "Franco Colapinto": 27.0,
       "Oliver Bearman": 23.0,
       "Gabriel Bortoleto": 14.0,
-      "Nico H\u00fclkenberg": 13.0,
+      "Nico H\u00fclkenberg": 14.0,
       "Esteban Ocon": 7.0,
       "Fernando Alonso": 7.0,
       "Carlos Sainz": 7.0,
@@ -920,7 +951,8 @@
       "Ryo Hirakawa": 1.0,
       "Lance Stroll": 0.0,
       "Valtteri Bottas": 0.0,
-      "Sergio P\u00e9rez": 0.0
+      "Sergio P\u00e9rez": 0.0,
+      "Rafael Camara": 0.0
     }
   ],
   "progression_constructors": [
@@ -1205,56 +1237,56 @@
     },
     {
       "round": 20,
-      "Mercedes": 630.0,
-      "Ferrari": 504.0,
-      "Red Bull": 382.0,
-      "McLaren": 365.0,
-      "RB F1 Team": 108.0,
+      "Mercedes": 652.0,
+      "Ferrari": 510.0,
+      "Red Bull": 415.0,
+      "McLaren": 398.0,
+      "RB F1 Team": 114.0,
       "Alpine F1 Team": 69.0,
       "Haas F1 Team": 31.0,
-      "Audi": 27.0,
+      "Audi": 28.0,
       "Williams": 12.0,
       "Aston Martin": 7.0,
       "Cadillac": 0.0
     },
     {
       "round": 21,
-      "Mercedes": 630.0,
-      "Ferrari": 504.0,
-      "Red Bull": 382.0,
-      "McLaren": 365.0,
-      "RB F1 Team": 108.0,
+      "Mercedes": 652.0,
+      "Ferrari": 510.0,
+      "Red Bull": 415.0,
+      "McLaren": 398.0,
+      "RB F1 Team": 114.0,
       "Alpine F1 Team": 69.0,
       "Haas F1 Team": 31.0,
-      "Audi": 27.0,
+      "Audi": 28.0,
       "Williams": 12.0,
       "Aston Martin": 7.0,
       "Cadillac": 0.0
     },
     {
       "round": 22,
-      "Mercedes": 630.0,
-      "Ferrari": 504.0,
-      "Red Bull": 382.0,
-      "McLaren": 365.0,
-      "RB F1 Team": 108.0,
+      "Mercedes": 652.0,
+      "Ferrari": 510.0,
+      "Red Bull": 415.0,
+      "McLaren": 398.0,
+      "RB F1 Team": 114.0,
       "Alpine F1 Team": 69.0,
       "Haas F1 Team": 31.0,
-      "Audi": 27.0,
+      "Audi": 28.0,
       "Williams": 12.0,
       "Aston Martin": 7.0,
       "Cadillac": 0.0
     },
     {
       "round": 23,
-      "Mercedes": 630.0,
-      "Ferrari": 504.0,
-      "Red Bull": 382.0,
-      "McLaren": 365.0,
-      "RB F1 Team": 108.0,
+      "Mercedes": 652.0,
+      "Ferrari": 510.0,
+      "Red Bull": 415.0,
+      "McLaren": 398.0,
+      "RB F1 Team": 114.0,
       "Alpine F1 Team": 69.0,
       "Haas F1 Team": 31.0,
-      "Audi": 27.0,
+      "Audi": 28.0,
       "Williams": 12.0,
       "Aston Martin": 7.0,
       "Cadillac": 0.0
@@ -1533,12 +1565,12 @@
       "date": "2026-11-08",
       "circuit": "Aut\u00f3dromo Jos\u00e9 Carlos Pace",
       "country": "Brazil",
-      "winner": null,
-      "winner_team": null,
-      "pole": null,
-      "pole_time": null,
-      "fastest_lap_driver": null,
-      "fastest_lap_time": null,
+      "winner": "Lando Norris",
+      "winner_team": "McLaren",
+      "pole": "Lando Norris",
+      "pole_time": "1:27.470",
+      "fastest_lap_driver": "Andrea Kimi Antonelli",
+      "fastest_lap_time": "1:12.689",
       "had_sprint": false
     },
     {
@@ -11317,10 +11349,386 @@
         "country": "Brazil",
         "locality": "S\u00e3o Paulo"
       },
-      "results": [],
+      "results": [
+        {
+          "position": 1,
+          "driver": "Lando Norris",
+          "team": "McLaren",
+          "time": "1:35:23.504",
+          "points": 25.0,
+          "grid": 1,
+          "status": "Finished"
+        },
+        {
+          "position": 2,
+          "driver": "Max Verstappen",
+          "team": "Red Bull",
+          "time": "+14.602",
+          "points": 18.0,
+          "grid": 21,
+          "status": "Finished"
+        },
+        {
+          "position": 3,
+          "driver": "Isack Hadjar",
+          "team": "Red Bull",
+          "time": "+24.485",
+          "points": 15.0,
+          "grid": 5,
+          "status": "Finished"
+        },
+        {
+          "position": 4,
+          "driver": "George Russell",
+          "team": "Mercedes",
+          "time": "+33.991",
+          "points": 12.0,
+          "grid": 7,
+          "status": "Finished"
+        },
+        {
+          "position": 5,
+          "driver": "Andrea Kimi Antonelli",
+          "team": "Mercedes",
+          "time": "+41.017",
+          "points": 10.0,
+          "grid": 2,
+          "status": "Finished"
+        },
+        {
+          "position": 6,
+          "driver": "Oscar Piastri",
+          "team": "McLaren",
+          "time": "+56.475",
+          "points": 8.0,
+          "grid": 10,
+          "status": "Finished"
+        },
+        {
+          "position": 7,
+          "driver": "Liam Lawson",
+          "team": "RB F1 Team",
+          "time": "+1:15.402",
+          "points": 6.0,
+          "grid": 3,
+          "status": "Finished"
+        },
+        {
+          "position": 8,
+          "driver": "Charles Leclerc",
+          "team": "Ferrari",
+          "time": "+1:18.586",
+          "points": 4.0,
+          "grid": 14,
+          "status": "Finished"
+        },
+        {
+          "position": 9,
+          "driver": "Lewis Hamilton",
+          "team": "Ferrari",
+          "time": "+4.427",
+          "points": 2.0,
+          "grid": 20,
+          "status": "Lapped"
+        },
+        {
+          "position": 10,
+          "driver": "Nico H\u00fclkenberg",
+          "team": "Audi",
+          "time": "+17.105",
+          "points": 1.0,
+          "grid": 4,
+          "status": "Lapped"
+        },
+        {
+          "position": 11,
+          "driver": "Arvid Lindblad",
+          "team": "RB F1 Team",
+          "time": "+19.130",
+          "points": 0.0,
+          "grid": 18,
+          "status": "Lapped"
+        },
+        {
+          "position": 12,
+          "driver": "Fernando Alonso",
+          "team": "Aston Martin",
+          "time": "+36.856",
+          "points": 0.0,
+          "grid": 8,
+          "status": "Lapped"
+        },
+        {
+          "position": 13,
+          "driver": "Franco Colapinto",
+          "team": "Alpine F1 Team",
+          "time": "+50.488",
+          "points": 0.0,
+          "grid": 13,
+          "status": "Lapped"
+        },
+        {
+          "position": 14,
+          "driver": "Pierre Gasly",
+          "team": "Alpine F1 Team",
+          "time": "+58.677",
+          "points": 0.0,
+          "grid": 15,
+          "status": "Lapped"
+        },
+        {
+          "position": 15,
+          "driver": "Alexander Albon",
+          "team": "Williams",
+          "time": "+1:04.101",
+          "points": 0.0,
+          "grid": 9,
+          "status": "Lapped"
+        },
+        {
+          "position": 16,
+          "driver": "Gabriel Bortoleto",
+          "team": "Audi",
+          "time": "+1:16.420",
+          "points": 0.0,
+          "grid": 19,
+          "status": "Lapped"
+        },
+        {
+          "position": 17,
+          "driver": "Oliver Bearman",
+          "team": "Haas F1 Team",
+          "time": "+1:31.711",
+          "points": 0.0,
+          "grid": 6,
+          "status": "Lapped"
+        },
+        {
+          "position": 18,
+          "driver": "Sergio P\u00e9rez",
+          "team": "Cadillac",
+          "time": "+27.120",
+          "points": 0.0,
+          "grid": 22,
+          "status": "Lapped"
+        },
+        {
+          "position": 19,
+          "driver": "Carlos Sainz",
+          "team": "Williams",
+          "time": "+32.463",
+          "points": 0.0,
+          "grid": 12,
+          "status": "Lapped"
+        },
+        {
+          "position": 20,
+          "driver": "Rafael Camara",
+          "team": "Haas F1 Team",
+          "time": "+51.715",
+          "points": 0.0,
+          "grid": 11,
+          "status": "Lapped"
+        },
+        {
+          "position": 21,
+          "driver": "Lance Stroll",
+          "team": "Aston Martin",
+          "time": "DNF",
+          "points": 0.0,
+          "grid": 16,
+          "status": "Retired"
+        },
+        {
+          "position": 22,
+          "driver": "Valtteri Bottas",
+          "team": "Cadillac",
+          "time": "DNS",
+          "points": 0.0,
+          "grid": 17,
+          "status": "Did not start"
+        }
+      ],
       "sprint_qualifying": [],
       "sprint": [],
-      "qualifying": [],
+      "qualifying": [
+        {
+          "position": 1,
+          "driver": "Lando Norris",
+          "team": "McLaren",
+          "q1": "1:30.939",
+          "q2": "1:29.207",
+          "q3": "1:27.470"
+        },
+        {
+          "position": 2,
+          "driver": "George Russell",
+          "team": "Mercedes",
+          "q1": "1:31.206",
+          "q2": "1:26.745",
+          "q3": "1:27.674"
+        },
+        {
+          "position": 3,
+          "driver": "Andrea Kimi Antonelli",
+          "team": "Mercedes",
+          "q1": "1:32.229",
+          "q2": "1:29.302",
+          "q3": "1:28.095"
+        },
+        {
+          "position": 4,
+          "driver": "Charles Leclerc",
+          "team": "Ferrari",
+          "q1": "1:32.121",
+          "q2": "1:28.082",
+          "q3": "1:28.289"
+        },
+        {
+          "position": 5,
+          "driver": "Liam Lawson",
+          "team": "RB F1 Team",
+          "q1": "1:32.085",
+          "q2": "1:27.049",
+          "q3": "1:28.321"
+        },
+        {
+          "position": 6,
+          "driver": "Nico H\u00fclkenberg",
+          "team": "Audi",
+          "q1": "1:31.693",
+          "q2": "1:28.361",
+          "q3": "1:28.668"
+        },
+        {
+          "position": 7,
+          "driver": "Isack Hadjar",
+          "team": "Red Bull",
+          "q1": "1:32.059",
+          "q2": "1:27.218",
+          "q3": "1:28.763"
+        },
+        {
+          "position": 8,
+          "driver": "Oliver Bearman",
+          "team": "Haas F1 Team",
+          "q1": "1:33.030",
+          "q2": "1:29.130",
+          "q3": "1:29.831"
+        },
+        {
+          "position": 9,
+          "driver": "Fernando Alonso",
+          "team": "Aston Martin",
+          "q1": "1:32.092",
+          "q2": "1:29.072",
+          "q3": "1:30.311"
+        },
+        {
+          "position": 10,
+          "driver": "Alexander Albon",
+          "team": "Williams",
+          "q1": "1:33.150",
+          "q2": "1:28.918",
+          "q3": "1:30.456"
+        },
+        {
+          "position": 11,
+          "driver": "Lewis Hamilton",
+          "team": "Ferrari",
+          "q1": "1:31.666",
+          "q2": "1:30.001",
+          "q3": null
+        },
+        {
+          "position": 12,
+          "driver": "Oscar Piastri",
+          "team": "McLaren",
+          "q1": "1:32.251",
+          "q2": "1:30.369",
+          "q3": null
+        },
+        {
+          "position": 13,
+          "driver": "Rafael Camara",
+          "team": "Haas F1 Team",
+          "q1": "1:32.809",
+          "q2": "1:31.515",
+          "q3": null
+        },
+        {
+          "position": 14,
+          "driver": "Arvid Lindblad",
+          "team": "RB F1 Team",
+          "q1": "1:32.306",
+          "q2": "1:31.687",
+          "q3": null
+        },
+        {
+          "position": 15,
+          "driver": "Carlos Sainz",
+          "team": "Williams",
+          "q1": "1:32.959",
+          "q2": "1:31.785",
+          "q3": null
+        },
+        {
+          "position": 16,
+          "driver": "Max Verstappen",
+          "team": "Red Bull",
+          "q1": "1:31.238",
+          "q2": "",
+          "q3": null
+        },
+        {
+          "position": 17,
+          "driver": "Franco Colapinto",
+          "team": "Alpine F1 Team",
+          "q1": "1:33.327",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 18,
+          "driver": "Pierre Gasly",
+          "team": "Alpine F1 Team",
+          "q1": "1:33.449",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 19,
+          "driver": "Lance Stroll",
+          "team": "Aston Martin",
+          "q1": "1:33.653",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 20,
+          "driver": "Valtteri Bottas",
+          "team": "Cadillac",
+          "q1": "1:33.774",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 21,
+          "driver": "Sergio P\u00e9rez",
+          "team": "Cadillac",
+          "q1": "1:34.509",
+          "q2": null,
+          "q3": null
+        },
+        {
+          "position": 22,
+          "driver": "Gabriel Bortoleto",
+          "team": "Audi",
+          "q1": "1:41.564",
+          "q2": null,
+          "q3": null
+        }
+      ],
       "practice": {
         "fp1_best": "Data unavailable from Ergast endpoint",
         "fp2_best": "Data unavailable from Ergast endpoint",
@@ -11332,12 +11740,12 @@
         "date": "2026-11-08",
         "circuit": "Aut\u00f3dromo Jos\u00e9 Carlos Pace",
         "country": "Brazil",
-        "winner": null,
-        "winner_team": null,
-        "pole": null,
-        "pole_time": null,
-        "fastest_lap_driver": null,
-        "fastest_lap_time": null,
+        "winner": "Lando Norris",
+        "winner_team": "McLaren",
+        "pole": "Lando Norris",
+        "pole_time": "1:27.470",
+        "fastest_lap_driver": "Andrea Kimi Antonelli",
+        "fastest_lap_time": "1:12.689",
         "had_sprint": false
       }
     },
@@ -11649,34 +12057,34 @@
     },
     {
       "round": 20,
-      "Mercedes": 1076.0,
-      "Ferrari": 535.0,
-      "Red Bull Ford": 490.0,
-      "Audi": 27.0,
+      "Mercedes": 1131.0,
+      "Ferrari": 541.0,
+      "Red Bull Ford": 529.0,
+      "Audi": 28.0,
       "Honda": 7.0
     },
     {
       "round": 21,
-      "Mercedes": 1076.0,
-      "Ferrari": 535.0,
-      "Red Bull Ford": 490.0,
-      "Audi": 27.0,
+      "Mercedes": 1131.0,
+      "Ferrari": 541.0,
+      "Red Bull Ford": 529.0,
+      "Audi": 28.0,
       "Honda": 7.0
     },
     {
       "round": 22,
-      "Mercedes": 1076.0,
-      "Ferrari": 535.0,
-      "Red Bull Ford": 490.0,
-      "Audi": 27.0,
+      "Mercedes": 1131.0,
+      "Ferrari": 541.0,
+      "Red Bull Ford": 529.0,
+      "Audi": 28.0,
       "Honda": 7.0
     },
     {
       "round": 23,
-      "Mercedes": 1076.0,
-      "Ferrari": 535.0,
-      "Red Bull Ford": 490.0,
-      "Audi": 27.0,
+      "Mercedes": 1131.0,
+      "Ferrari": 541.0,
+      "Red Bull Ford": 529.0,
+      "Audi": 28.0,
       "Honda": 7.0
     }
   ],
@@ -11684,7 +12092,7 @@
     {
       "position": 1,
       "power_unit": "Mercedes",
-      "points": 1076.0,
+      "points": 1131.0,
       "teams": [
         "Mercedes",
         "McLaren",
@@ -11695,7 +12103,7 @@
     {
       "position": 2,
       "power_unit": "Ferrari",
-      "points": 535.0,
+      "points": 541.0,
       "teams": [
         "Ferrari",
         "Haas F1 Team",
@@ -11705,7 +12113,7 @@
     {
       "position": 3,
       "power_unit": "Red Bull Ford",
-      "points": 490.0,
+      "points": 529.0,
       "teams": [
         "Red Bull",
         "RB F1 Team"
@@ -11714,7 +12122,7 @@
     {
       "position": 4,
       "power_unit": "Audi",
-      "points": 27.0,
+      "points": 28.0,
       "teams": [
         "Audi"
       ]
